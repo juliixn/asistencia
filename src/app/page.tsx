@@ -62,6 +62,7 @@ import {
   MoreVertical,
   Activity,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -235,6 +236,17 @@ export default function GuardianPayrollPage() {
       });
     }, 2000);
   };
+
+  const handleClearCache = () => {
+    if (window.confirm('¿Estás seguro de que quieres borrar todos los datos de asistencia locales? Esta acción no se puede deshacer.')) {
+      localStorage.removeItem('attendanceData');
+      setAttendance({});
+      toast({
+        title: 'Caché Limpiada',
+        description: 'Se han borrado los datos de asistencia locales.',
+      });
+    }
+  };
   
   const handleExportIndividualPDF = (employeeName: string) => {
     toast({
@@ -251,11 +263,18 @@ export default function GuardianPayrollPage() {
           <header className="p-4 border-b bg-white shadow-sm">
             <div className="flex items-center justify-between">
               <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Dashboard de Asistencia</h1>
-              <Button onClick={handleSync} disabled={isSyncing}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
-                 <span className="md:hidden">Sinc.</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleSync} disabled={isSyncing}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                  <span className="md:hidden">Sinc.</span>
+                </Button>
+                <Button variant="outline" onClick={handleClearCache}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                   <span className="hidden md:inline">Limpiar Caché</span>
+                   <span className="md:hidden">Limpiar</span>
+                </Button>
+              </div>
             </div>
           </header>
           <main className="flex-1 p-2 md:p-6 overflow-auto">
