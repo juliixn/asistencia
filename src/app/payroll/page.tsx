@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -12,12 +13,126 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator } from 'lucide-react';
+import { format, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import { initialEmployees } from '@/lib/data';
+import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
+
+interface PayrollDetail {
+    employeeId: string;
+    employeeName: string;
+    shiftsWorked: number;
+    basePay: number;
+    loanDeductions: number;
+    bonuses: number;
+    netPay: number;
+}
 
 export default function PayrollPage() {
+  const { toast } = useToast();
   const [currentDate] = React.useState(new Date());
+  const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
+  const [payrollData, setPayrollData] = React.useState<PayrollDetail[]>([]);
+  const [isCalculating, setIsCalculating] = React.useState(false);
+  
+  const [summary, setSummary] = React.useState({
+    totalNetPay: 0,
+    totalEmployees: 0,
+    totalDeductions: 0,
+    totalBonuses: 0,
+  });
+
+  const handleCalculatePayroll = () => {
+    setIsCalculating(true);
+    toast({
+        title: "Calculando Nómina...",
+        description: "Por favor espera mientras procesamos los datos.",
+    });
+
+    // Simulate calculation delay
+    setTimeout(() => {
+        const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+        const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
+
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = getDaysInMonth(currentDate);
+
+        const startDay = period === '1-15' ? 1 : 16;
+        const endDay = period === '1-15' ? 15 : daysInMonth;
+
+        const calculatedPayroll = initialEmployees.map(employee => {
+            let shiftsWorked = 0;
+            
+            for (let day = startDay; day <= endDay; day++) {
+                const dateStr = format(new Date(year, month, day), 'yyyy-MM-dd');
+                const dayKey = `${employee.id}-${dateStr}-day`;
+                const nightKey = `${employee.id}-${dateStr}-night`;
+
+                if (attendanceData[dayKey]?.status === 'Asistencia') {
+                    shiftsWorked++;
+                }
+                if (attendanceData[nightKey]?.status === 'Asistencia') {
+                    shiftsWorked++;
+                }
+            }
+
+            const basePay = shiftsWorked * employee.shiftRate;
+
+            // Simplified loan deduction: deduct one installment if loan is active and term is 'quincenal'
+            const activeLoan = loanData.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
+            let loanDeductions = 0;
+            if (activeLoan && activeLoan.term === 'quincenal' && activeLoan.installments > 0) {
+                 loanDeductions = activeLoan.amount / activeLoan.installments;
+            } else if (activeLoan && activeLoan.term === 'única') {
+                 loanDeductions = activeLoan.amount;
+            }
+
+            const bonuses = 0; // Placeholder for future bonus logic
+            const netPay = basePay - loanDeductions + bonuses;
+
+            return {
+                employeeId: employee.id,
+                employeeName: employee.name,
+                shiftsWorked,
+                basePay,
+                loanDeductions,
+                bonuses,
+                netPay,
+            };
+        });
+
+        setPayrollData(calculatedPayroll);
+        
+        const newSummary = calculatedPayroll.reduce((acc, item) => {
+            acc.totalNetPay += item.netPay;
+            acc.totalDeductions += item.loanDeductions;
+            acc.totalBonuses += item.bonuses;
+            return acc;
+        }, { totalNetPay: 0, totalDeductions: 0, totalBonuses: 0 });
+
+        setSummary({
+            ...newSummary,
+            totalEmployees: calculatedPayroll.filter(p => p.netPay > 0).length,
+        });
+        
+        setIsCalculating(false);
+         toast({
+            title: "Cálculo Completado",
+            description: "La pre-nómina ha sido generada.",
+        });
+    }, 1500);
+  }
 
   return (
     <SidebarProvider>
@@ -28,11 +143,11 @@ export default function PayrollPage() {
                 <div className="flex items-center justify-between">
                 <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Cálculo de Nómina</h1>
                  <div className="flex items-center gap-2">
-                     <Button>
+                     <Button disabled>
                         <CheckCircle className="mr-2" />
                         Cerrar Periodo de Nómina
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" disabled>
                         <FileDown className="mr-2" />
                         Exportar Reporte General
                     </Button>
@@ -51,7 +166,7 @@ export default function PayrollPage() {
                     </CardHeader>
                     <CardContent className="flex flex-col md:flex-row items-center gap-4">
                         <div className="flex-1 w-full">
-                            <Select defaultValue="1-15">
+                            <Select value={period} onValueChange={(v) => setPeriod(v as PayrollPeriod)}>
                                 <SelectTrigger className="bg-white">
                                 <CalendarDays className="mr-2 h-4 w-4" />
                                 <SelectValue placeholder="Seleccionar periodo" />
@@ -62,7 +177,10 @@ export default function PayrollPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button className="w-full md:w-auto">Calcular Nómina</Button>
+                        <Button className="w-full md:w-auto" onClick={handleCalculatePayroll} disabled={isCalculating}>
+                            <Calculator className="mr-2" />
+                            {isCalculating ? 'Calculando...' : 'Calcular Nómina'}
+                        </Button>
                     </CardContent>
                 </Card>
 
@@ -73,8 +191,8 @@ export default function PayrollPage() {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                        <div className="text-2xl font-bold">$ 45,231.89</div>
-                        <p className="text-xs text-muted-foreground">Nómina bruta del periodo</p>
+                        <div className="text-2xl font-bold">$ {summary.totalNetPay.toFixed(2)}</div>
+                        <p className="text-xs text-muted-foreground">Nómina neta del periodo</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -83,7 +201,7 @@ export default function PayrollPage() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                        <div className="text-2xl font-bold">+5</div>
+                        <div className="text-2xl font-bold">+{summary.totalEmployees}</div>
                         <p className="text-xs text-muted-foreground">Total de empleados activos</p>
                         </CardContent>
                     </Card>
@@ -93,7 +211,7 @@ export default function PayrollPage() {
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                        <div className="text-2xl font-bold">$ 1,250.00</div>
+                        <div className="text-2xl font-bold">$ {summary.totalDeductions.toFixed(2)}</div>
                         <p className="text-xs text-muted-foreground">Descuentos del periodo</p>
                         </CardContent>
                     </Card>
@@ -103,7 +221,7 @@ export default function PayrollPage() {
                         <CheckCircle className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                        <div className="text-2xl font-bold">$ 800.00</div>
+                        <div className="text-2xl font-bold">$ {summary.totalBonuses.toFixed(2)}</div>
                         <p className="text-xs text-muted-foreground">Pagos adicionales</p>
                         </CardContent>
                     </Card>
@@ -111,15 +229,44 @@ export default function PayrollPage() {
                  <div className="mt-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Pre-nómina (Aún no implementado)</CardTitle>
+                            <CardTitle>Pre-nómina del Periodo: {period === '1-15' ? '1-15' : `16-${getDaysInMonth(currentDate)}`} de {format(currentDate, 'MMMM', { locale: es })}</CardTitle>
                             <CardDescription>
-                                Aquí se mostrará el desglose de la nómina por empleado una vez que se calcule.
+                                Aquí se muestra el desglose de la nómina por empleado.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                           <p className="text-center text-muted-foreground py-12">
-                                Presiona "Calcular Nómina" para ver los resultados.
-                            </p>
+                           {payrollData.length > 0 ? (
+                                <div className="overflow-x-auto rounded-lg border">
+                                    <Table>
+                                        <TableHeader className="bg-gray-50/50">
+                                            <TableRow>
+                                                <TableHead>Empleado</TableHead>
+                                                <TableHead className="text-center">Turnos</TableHead>
+                                                <TableHead className="text-right">Sueldo Bruto</TableHead>
+                                                <TableHead className="text-right">Deducciones</TableHead>
+                                                <TableHead className="text-right">Bonos</TableHead>
+                                                <TableHead className="text-right font-bold">Pago Neto</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {payrollData.map(item => (
+                                                <TableRow key={item.employeeId}>
+                                                    <TableCell className="font-medium">{item.employeeName}</TableCell>
+                                                    <TableCell className="text-center">{item.shiftsWorked}</TableCell>
+                                                    <TableCell className="text-right">${item.basePay.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right text-destructive">-${item.loanDeductions.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right text-green-600">+${item.bonuses.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-bold">${item.netPay.toFixed(2)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                           ) : (
+                                <p className="text-center text-muted-foreground py-12">
+                                    {isCalculating ? 'Procesando datos...' : 'Presiona "Calcular Nómina" para ver los resultados.'}
+                                </p>
+                           )}
                         </CardContent>
                     </Card>
                  </div>
