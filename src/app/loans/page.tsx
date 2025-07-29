@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import SignatureCanvas from 'react-signature-canvas';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,7 +55,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
-import { PlusCircle, FilePen, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
+import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
@@ -294,9 +295,13 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
   const [term, setTerm] = React.useState<'unica' | 'quincenal'>('unica');
   const [installments, setInstallments] = React.useState<number>(1);
   const [reason, setReason] = React.useState('');
-  const [signature, setSignature] = React.useState(''); // Placeholder for signature pad
+  const signatureRef = React.useRef<SignatureCanvas>(null);
 
   const { toast } = useToast();
+  
+  const clearSignature = () => {
+    signatureRef.current?.clear();
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,6 +325,15 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
         });
         return;
     }
+
+    if (signatureRef.current?.isEmpty()) {
+       toast({
+            variant: "destructive",
+            title: "Firma Requerida",
+            description: "Por favor, proporciona la firma del solicitante.",
+        });
+        return;
+    }
     
     onSave({
         employeeId,
@@ -329,7 +343,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
         reason,
         requestDate: new Date().toISOString().split('T')[0],
         status: 'Pendiente',
-        signature: 'signature_data_url_placeholder', // Replace with actual signature data
+        signature: signatureRef.current?.toDataURL() || '',
     })
   }
 
@@ -390,10 +404,19 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                     <Textarea id="reason" placeholder="Describe brevemente el motivo..." value={reason} onChange={e => setReason(e.target.value)} />
                  </div>
                  <div className="space-y-2">
-                    <Label>Firma del Solicitante</Label>
-                    <div className="w-full h-32 rounded-md border border-dashed flex items-center justify-center bg-gray-50">
-                        <FilePen className="text-muted-foreground" />
-                        <span className="ml-2 text-muted-foreground">Área para firmar</span>
+                    <div className="flex items-center justify-between">
+                      <Label>Firma del Solicitante</Label>
+                      <Button type="button" variant="ghost" size="sm" onClick={clearSignature}>
+                        <Eraser className="mr-2 h-4 w-4" />
+                        Limpiar
+                      </Button>
+                    </div>
+                    <div className="w-full rounded-md border border-input">
+                      <SignatureCanvas
+                        ref={signatureRef}
+                        penColor='black'
+                        canvasProps={{ className: 'w-full h-[150px] rounded-md' }}
+                      />
                     </div>
                  </div>
             </div>
@@ -407,5 +430,3 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
     </DialogContent>
   )
 }
-
-    
