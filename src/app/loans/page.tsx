@@ -54,9 +54,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
-import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
+import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
+import { analyzeSignature } from '@/ai/flows/analyze-signature';
 
 
 // Mock data for loans
@@ -308,6 +309,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
   const [installments, setInstallments] = React.useState<number>(1);
   const [reason, setReason] = React.useState('');
   const signatureRef = React.useRef<SignatureCanvas>(null);
+  const [isProcessing, setIsProcessing] = React.useState(false);
 
   const { toast } = useToast();
   
@@ -315,8 +317,9 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
     signatureRef.current?.clear();
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsProcessing(true);
     
     const selectedEmployee = initialEmployees.find(e => e.id === employeeId);
     const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
@@ -327,6 +330,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
             title: "Campos Incompletos",
             description: "Por favor, completa todos los campos requeridos.",
         });
+        setIsProcessing(false);
         return;
     }
     if (amount > maxLoanAmount) {
@@ -335,6 +339,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
             title: "Monto Excedido",
             description: `El monto solicitado excede el máximo de $${maxLoanAmount.toFixed(2)} permitido para este empleado.`,
         });
+        setIsProcessing(false);
         return;
     }
 
@@ -344,19 +349,50 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
             title: "Firma Requerida",
             description: "Por favor, proporciona la firma del solicitante.",
         });
+        setIsProcessing(false);
         return;
     }
+
+    try {
+        const signatureDataUrl = signatureRef.current.toDataURL();
+        const analysis = await analyzeSignature({ signatureDataUri: signatureDataUrl });
+
+        if (!analysis.isLegible) {
+             toast({
+                variant: "destructive",
+                title: "Firma Inválida",
+                description: `Análisis de IA: "${analysis.reason}". Por favor, proporciona una firma clara.`,
+            });
+            setIsProcessing(false);
+            return;
+        }
+
+        toast({
+            title: "Firma Verificada por IA",
+            description: "La firma parece ser válida. Procesando solicitud...",
+        });
     
-    onSave({
-        employeeId,
-        amount,
-        term: term === 'unica' ? 'única' : 'quincenal',
-        installments,
-        reason,
-        requestDate: new Date().toISOString().split('T')[0],
-        status: 'Pendiente',
-        signature: signatureRef.current?.toDataURL() || '',
-    })
+        onSave({
+            employeeId,
+            amount,
+            term: term === 'unica' ? 'única' : 'quincenal',
+            installments,
+            reason,
+            requestDate: new Date().toISOString().split('T')[0],
+            status: 'Pendiente',
+            signature: signatureDataUrl,
+        });
+
+    } catch(error) {
+        console.error("Error analyzing signature:", error);
+        toast({
+            variant: "destructive",
+            title: "Error de Análisis",
+            description: "No se pudo analizar la firma. Inténtalo de nuevo.",
+        });
+    } finally {
+        setIsProcessing(false);
+    }
   }
 
   const selectedEmployee = initialEmployees.find(e => e.id === employeeId);
@@ -434,9 +470,11 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
                 <DialogClose asChild>
-                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose}>Cancelar</Button>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose} disabled={isProcessing}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" className="w-full sm:w-auto">Enviar Solicitud</Button>
+                <Button type="submit" className="w-full sm:w-auto" disabled={isProcessing}>
+                    {isProcessing ? <><Loader2 className="animate-spin" /> Analizando...</> : "Enviar Solicitud"}
+                </Button>
             </DialogFooter>
         </form>
     </DialogContent>
