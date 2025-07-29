@@ -1,7 +1,7 @@
+
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +46,7 @@ import type {
   AttendanceRecord,
   AttendanceStatus,
   PayrollPeriod,
+  LoanRequest,
 } from '@/lib/types';
 import {
   CalendarDays,
@@ -55,16 +56,14 @@ import {
   User,
   FileDown,
   RefreshCw,
-  TrendingUp,
   DollarSign,
   UserCheck,
   FileText,
   MoreVertical,
-  Activity,
   AlertTriangle,
   Trash2,
 } from 'lucide-react';
-import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter } from 'date-fns';
+import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, eachDayOfInterval, getMonth, getYear, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   ChartContainer,
@@ -100,59 +99,14 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
   'Permiso S/S': 'bg-gray-200 text-gray-800 border border-gray-300',
 };
 
-const chartData = [
-  { month: "Enero", desktop: 186, mobile: 80 },
-  { month: "Febrero", desktop: 305, mobile: 200 },
-  { month: "Marzo", desktop: 237, mobile: 120 },
-  { month: "Abril", desktop: 73, mobile: 190 },
-  { month: "Mayo", desktop: 209, mobile: 130 },
-  { month: "Junio", desktop: 214, mobile: 140 },
-]
-
-const chartConfig = {
-  desktop: {
-    label: "Asistencias",
-    color: "hsl(var(--chart-1))",
-  },
-  mobile: {
-    label: "Faltas",
-    color: "hsl(var(--chart-2))",
-  },
+const PIE_CHART_COLORS: Record<string, string> = {
+  Asistencia: "hsl(var(--chart-1))",
+  Falta: "hsl(var(--chart-2))",
+  Retardo: "hsl(var(--chart-3))",
+  Descanso: "hsl(var(--chart-4))",
+  Otros: "hsl(var(--chart-5))",
 }
 
-const pieChartData = [
-  { browser: "asistencias", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "faltas", visitors: 50, fill: "var(--color-safari)" },
-  { browser: "retardos", visitors: 75, fill: "var(--color-firefox)" },
-  { browser: "descansos", visitors: 150, fill: "var(--color-edge)" },
-  { browser: "otros", visitors: 25, fill: "var(--color-other)" },
-]
-
-const pieChartConfig = {
-  visitors: {
-    label: "Turnos",
-  },
-  chrome: {
-    label: "Asistencias",
-    color: "hsl(var(--chart-1))",
-  },
-  safari: {
-    label: "Faltas",
-    color: "hsl(var(--chart-2))",
-  },
-  firefox: {
-    label: "Retardos",
-    color: "hsl(var(--chart-3))",
-  },
-  edge: {
-    label: "Descansos",
-    color: "hsl(var(--chart-4))",
-  },
-  other: {
-    label: "Otros",
-    color: "hsl(var(--chart-5))",
-  },
-}
 
 export default function GuardianPayrollPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -167,7 +121,100 @@ export default function GuardianPayrollPage() {
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [isClient, setIsClient] = React.useState(false);
 
+  // States for dashboard data
+  const [dashboardStats, setDashboardStats] = React.useState({
+    totalAttendance: 0,
+    estimatedPayroll: 0,
+    absencesAndLates: 0,
+    activeLoans: 0,
+    activeLoansAmount: 0,
+    barChartData: [],
+    pieChartData: [],
+  });
+
   const { toast } = useToast();
+
+  const calculateDashboardStats = React.useCallback(() => {
+    const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+    const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
+    const now = new Date();
+    
+    // --- Cards Stats ---
+    const currentMonthRecords = Object.values(attendanceData).filter(r => {
+        const recordDate = parseISO(r.date);
+        return getYear(recordDate) === getYear(now) && getMonth(recordDate) === getMonth(now);
+    });
+
+    const totalAttendance = currentMonthRecords.filter(r => r.status === 'Asistencia').length;
+    const absencesAndLates = currentMonthRecords.filter(r => r.status === 'Falta' || r.status === 'Retardo').length;
+
+    const estimatedPayroll = currentMonthRecords
+        .filter(r => r.status === 'Asistencia')
+        .reduce((acc, r) => {
+            const employee = initialEmployees.find(e => e.id === r.employeeId);
+            return acc + (employee?.shiftRate || 0);
+        }, 0);
+    
+    const activeLoans = loanData.filter(l => l.status === 'Aprobado');
+    const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0);
+
+    // --- Pie Chart Stats ---
+    const periodStartDay = period === '1-15' ? 1 : 16;
+    const daysInMonth = getDaysInMonth(currentDate);
+    const periodEndDay = period === '1-15' ? 15 : daysInMonth;
+
+    const periodRecords = Object.values(attendanceData).filter(r => {
+        const recordDate = parseISO(r.date);
+        const recordDay = getDate(recordDate);
+        return getYear(recordDate) === getYear(currentDate) && getMonth(recordDate) === getMonth(currentDate) && recordDay >= periodStartDay && recordDay <= periodEndDay;
+    });
+
+    const pieChartDataRaw = periodRecords.reduce((acc, record) => {
+        const status = record.status;
+        if (['Asistencia', 'Falta', 'Retardo', 'Descanso'].includes(status)) {
+            acc[status] = (acc[status] || 0) + 1;
+        } else {
+            acc['Otros'] = (acc['Otros'] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const pieChartData = Object.entries(pieChartDataRaw).map(([name, value]) => ({
+      name,
+      value,
+      fill: PIE_CHART_COLORS[name] || PIE_CHART_COLORS['Otros'],
+    }));
+
+    // --- Bar Chart Stats ---
+    const sixMonthsAgo = sub(startOfMonth(now), { months: 5 });
+    const monthLabels = Array.from({ length: 6 }, (_, i) => format(add(sixMonthsAgo, { months: i }), 'MMMM', { locale: es }));
+    
+    const barChartData = monthLabels.map((monthLabel, i) => {
+      const targetMonth = add(sixMonthsAgo, { months: i });
+      const monthRecords = Object.values(attendanceData).filter(r => {
+        const recordDate = parseISO(r.date);
+        return getYear(recordDate) === getYear(targetMonth) && getMonth(recordDate) === getMonth(targetMonth);
+      });
+      
+      return {
+        month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+        Asistencias: monthRecords.filter(r => r.status === 'Asistencia').length,
+        Faltas: monthRecords.filter(r => r.status === 'Falta').length,
+      };
+    });
+
+    setDashboardStats({
+      totalAttendance,
+      estimatedPayroll,
+      absencesAndLates,
+      activeLoans: activeLoans.length,
+      activeLoansAmount: activeLoansAmount,
+      barChartData: barChartData as [],
+      pieChartData: pieChartData as [],
+    });
+
+  }, [currentDate, period]);
+
 
   React.useEffect(() => {
     setIsClient(true);
@@ -180,8 +227,10 @@ export default function GuardianPayrollPage() {
   React.useEffect(() => {
     if (isClient) {
       localStorage.setItem('attendanceData', JSON.stringify(attendance));
+      calculateDashboardStats();
     }
-  }, [attendance, isClient]);
+  }, [attendance, isClient, calculateDashboardStats]);
+
 
   const handlePeriodChange = (value: string) => {
     setPeriod(value as PayrollPeriod);
@@ -254,6 +303,32 @@ export default function GuardianPayrollPage() {
         description: `Generando la nómina para ${employeeName}.`
     });
   }
+  
+  const barChartConfig = {
+    Asistencias: { label: "Asistencias", color: "hsl(var(--chart-1))" },
+    Faltas: { label: "Faltas", color: "hsl(var(--chart-2))" },
+  }
+
+  const pieChartConfig = {
+    value: { label: "Turnos" },
+    Asistencia: { label: "Asistencias", color: "hsl(var(--chart-1))" },
+    Falta: { label: "Faltas", color: "hsl(var(--chart-2))" },
+    Retardo: { label: "Retardos", color: "hsl(var(--chart-3))" },
+    Descanso: { label: "Descansos", color: "hsl(var(--chart-4))" },
+    Otros: { label: "Otros", color: "hsl(var(--chart-5))" },
+  }
+
+
+  if (!isClient) {
+    return (
+        <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+                <div className="flex items-center justify-center h-full">Cargando...</div>
+            </SidebarInset>
+        </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -281,32 +356,32 @@ export default function GuardianPayrollPage() {
             <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Asistencia Total (Turnos)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Asistencia del Mes (Turnos)</CardTitle>
                   <UserCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">1,234</div>
-                  <p className="text-xs text-muted-foreground">+5.2% desde el mes pasado</p>
+                  <div className="text-2xl font-bold">{dashboardStats.totalAttendance}</div>
+                  <p className="text-xs text-muted-foreground">Total de turnos con asistencia</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Nómina Estimada</CardTitle>
+                  <CardTitle className="text-sm font-medium">Nómina Estimada (Mes)</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$45,231.89</div>
-                  <p className="text-xs text-muted-foreground">Periodo actual</p>
+                  <div className="text-2xl font-bold">${dashboardStats.estimatedPayroll.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground">Estimación basada en asistencias</p>
                 </CardContent>
               </Card>
                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Faltas y Retardos</CardTitle>
+                  <CardTitle className="text-sm font-medium">Faltas y Retardos (Mes)</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">22</div>
-                  <p className="text-xs text-muted-foreground">-1.8% desde el mes pasado</p>
+                  <div className="text-2xl font-bold">{dashboardStats.absencesAndLates}</div>
+                  <p className="text-xs text-muted-foreground">Total de incidencias negativas</p>
                 </CardContent>
               </Card>
               <Card>
@@ -315,8 +390,8 @@ export default function GuardianPayrollPage() {
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">5</div>
-                   <p className="text-xs text-muted-foreground">Total de $12,500</p>
+                  <div className="text-2xl font-bold">{dashboardStats.activeLoans}</div>
+                   <p className="text-xs text-muted-foreground">Total de ${dashboardStats.activeLoansAmount.toFixed(2)}</p>
                 </CardContent>
               </Card>
             </div>
@@ -327,8 +402,8 @@ export default function GuardianPayrollPage() {
                         <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ChartContainer config={chartConfig} className="h-64 w-full">
-                            <BarChart accessibilityLayer data={chartData}>
+                        <ChartContainer config={barChartConfig} className="h-64 w-full">
+                            <BarChart accessibilityLayer data={dashboardStats.barChartData}>
                                 <CartesianGrid vertical={false} />
                                 <XAxis
                                 dataKey="month"
@@ -339,8 +414,8 @@ export default function GuardianPayrollPage() {
                                 />
                                 <ChartTooltip content={<ChartTooltipContent />} />
                                 <ChartLegend content={<ChartLegendContent />} />
-                                <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-                                <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
+                                <Bar dataKey="Asistencias" fill="var(--color-Asistencias)" radius={4} />
+                                <Bar dataKey="Faltas" fill="var(--color-Faltas)" radius={4} />
                             </BarChart>
                         </ChartContainer>
                     </CardContent>
@@ -357,18 +432,18 @@ export default function GuardianPayrollPage() {
                               content={<ChartTooltipContent hideLabel />}
                             />
                              <Pie
-                              data={pieChartData}
-                              dataKey="visitors"
-                              nameKey="browser"
+                              data={dashboardStats.pieChartData}
+                              dataKey="value"
+                              nameKey="name"
                               innerRadius={60}
                               strokeWidth={5}
                             >
-                               {pieChartData.map((entry, index) => (
+                               {dashboardStats.pieChartData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                               ))}
                             </Pie>
                             <ChartLegend
-                              content={<ChartLegendContent nameKey="browser" />}
+                              content={<ChartLegendContent nameKey="name" />}
                               className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
                             />
                           </PieChart>
