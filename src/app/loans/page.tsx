@@ -21,6 +21,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -29,6 +36,17 @@ import {
   DialogClose,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -36,7 +54,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
-import { PlusCircle, FilePen, MoreHorizontal, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { PlusCircle, FilePen, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
@@ -90,7 +108,6 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 export default function LoansPage() {
   const [loans, setLoans] = React.useState<LoanRequest[]>(initialLoans);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
-
   const { toast } = useToast();
 
   const handleCreateRequest = (newRequest: Omit<LoanRequest, 'id'>) => {
@@ -106,10 +123,29 @@ export default function LoansPage() {
     setIsRequestDialogOpen(false);
   }
 
+  const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
+    setLoans(prevLoans => prevLoans.map(loan => {
+      if (loan.id === loanId) {
+        const employee = initialEmployees.find(e => e.id === loan.employeeId);
+        toast({
+          title: `Préstamo ${newStatus}`,
+          description: `La solicitud de ${employee?.name} ha sido actualizada.`,
+        });
+        return { 
+          ...loan, 
+          status: newStatus,
+          approvedBy: '5', // Mock director's ID
+          approvalDate: new Date().toISOString().split('T')[0],
+        };
+      }
+      return loan;
+    }));
+  };
+
   // NOTE: This is a placeholder for actual role-based access control
-  const currentUserRole: Employee['role'] = 'Dirección';
-  const canCreateRequest = ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUserRole);
-  const canApproveRequest = currentUserRole === 'Dirección';
+  const currentUser: Employee = initialEmployees.find(e => e.role === 'Dirección')!;
+  const canCreateRequest = ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
+  const canApproveRequest = currentUser.role === 'Dirección';
 
 
   return (
@@ -158,6 +194,8 @@ export default function LoansPage() {
                         {loans.map(loan => {
                             const employee = initialEmployees.find(e => e.id === loan.employeeId);
                             const StatusIcon = statusConfig[loan.status].icon;
+                            const isPending = loan.status === 'Pendiente';
+
                             return (
                                 <TableRow key={loan.id}>
                                     <TableCell className="font-medium">{employee?.name || 'Desconocido'}</TableCell>
@@ -171,9 +209,68 @@ export default function LoansPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
+                                       <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon">
+                                                  <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                              <DropdownMenuItem>
+                                                  <Eye className="mr-2 h-4 w-4"/>
+                                                  Ver Detalles
+                                              </DropdownMenuItem>
+                                              {canApproveRequest && isPending && (
+                                                <>
+                                                  <DropdownMenuSeparator />
+                                                  <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <ThumbsUp className="mr-2 h-4 w-4 text-green-500" />
+                                                        Aprobar
+                                                      </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Confirmar Aprobación?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                          Esta acción aprobará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
+                                                        </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Aprobado')}>
+                                                          Confirmar
+                                                        </AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                  </AlertDialog>
+                                                  <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <ThumbsDown className="mr-2 h-4 w-4 text-red-500" />
+                                                        Rechazar
+                                                      </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Confirmar Rechazo?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                          Esta acción rechazará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
+                                                        </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Rechazado')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                          Rechazar Préstamo
+                                                        </AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                  </AlertDialog>
+                                                </>
+                                              )}
+                                          </DropdownMenuContent>
+                                       </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             )
@@ -199,10 +296,28 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
   const [reason, setReason] = React.useState('');
   const [signature, setSignature] = React.useState(''); // Placeholder for signature pad
 
+  const { toast } = useToast();
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const selectedEmployee = initialEmployees.find(e => e.id === employeeId);
+    const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
+
     if (!employeeId || amount <= 0 || !reason) {
-        // Basic validation
+        toast({
+            variant: "destructive",
+            title: "Campos Incompletos",
+            description: "Por favor, completa todos los campos requeridos.",
+        });
+        return;
+    }
+    if (amount > maxLoanAmount) {
+       toast({
+            variant: "destructive",
+            title: "Monto Excedido",
+            description: `El monto solicitado excede el máximo de $${maxLoanAmount.toFixed(2)} permitido para este empleado.`,
+        });
         return;
     }
     
@@ -243,20 +358,22 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="amount">Monto a Solicitar</Label>
-                    <Input id="amount" type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value))} max={maxLoanAmount} />
+                    <Input id="amount" type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} max={maxLoanAmount} />
                     {selectedEmployee && <p className="text-xs text-muted-foreground">Máximo permitido para este empleado: ${maxLoanAmount.toFixed(2)}</p>}
                  </div>
                  <div className="space-y-2">
                     <Label>Plazo de Pago</Label>
                     <RadioGroup value={term} onValueChange={(v) => {
-                        setTerm(v as 'unica' | 'quincenal');
-                        if (v === 'unica') setInstallments(1);
+                        const newTerm = v as 'unica' | 'quincenal';
+                        setTerm(newTerm);
+                        if (newTerm === 'unica') setInstallments(1);
+                        else if (installments < 2) setInstallments(2);
                     }} className="flex gap-4">
-                        <div>
+                        <div className="flex items-center">
                             <RadioGroupItem value="unica" id="unica" />
                             <Label htmlFor="unica" className="ml-2">Una sola exhibición</Label>
                         </div>
-                         <div>
+                         <div className="flex items-center">
                             <RadioGroupItem value="quincenal" id="quincenal" />
                             <Label htmlFor="quincenal" className="ml-2">Pagos Quincenales</Label>
                         </div>
@@ -265,7 +382,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                 {term === 'quincenal' && (
                     <div className="space-y-2">
                         <Label htmlFor="installments">Número de Pagos</Label>
-                        <Input id="installments" type="number" min="2" value={installments} onChange={e => setInstallments(parseInt(e.target.value, 10))} />
+                        <Input id="installments" type="number" min="2" value={installments} onChange={e => setInstallments(parseInt(e.target.value, 10) || 2)} />
                     </div>
                 )}
                  <div className="space-y-2">
