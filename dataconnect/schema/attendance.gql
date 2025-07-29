@@ -1,0 +1,35 @@
+
+"""
+Represents a single attendance record for an employee for a specific shift.
+"""
+type AttendanceRecord @table(key: ["employeeId", "date", "shift"]) {
+  "The ID of the employee this record belongs to."
+  employeeId: String!
+  "The date of the attendance record in YYYY-MM-DD format."
+  date: String!
+  "The shift for which the attendance is recorded ('day' or 'night')."
+  shift: String!
+  "The status of the attendance."
+  status: AttendanceStatus!
+  "The ID of the work location, if applicable."
+  locationId: String
+  "URL or Base64 string of photographic evidence, if any."
+  photoEvidence: String
+  "Additional notes for the record."
+  notes: String
+}
+
+"""
+Enum for the possible attendance statuses.
+"""
+enum AttendanceStatus {
+  Asistencia
+  Retardo
+  Falta
+  Descanso
+  Incapacidad
+  Vacaciones
+  Enfermedad
+  Permiso_CS # Con Sueldo
+  Permiso_SS # Sin Sueldo
+}

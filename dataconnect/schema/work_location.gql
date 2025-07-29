@@ -1,0 +1,10 @@
+
+"""
+Represents a work location or service center where employees are assigned.
+"""
+type WorkLocation @table(key: "id") {
+  "The unique identifier for the work location."
+  id: String!
+  "The name of the work location (e.g., 'Plaza Central')."
+  name: String!
+}

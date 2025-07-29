@@ -1,0 +1,46 @@
+
+"""
+Represents a loan request made by an employee.
+"""
+type LoanRequest @table(key: "id") {
+  "The unique identifier for the loan request."
+  id: String!
+  "The ID of the employee who requested the loan."
+  employeeId: String!
+  "The date the request was made in YYYY-MM-DD format."
+  requestDate: String!
+  "The requested loan amount."
+  amount: Float!
+  "The repayment term for the loan."
+  term: LoanTerm!
+  "Number of installments for repayment."
+  installments: Int!
+  "The reason for the loan request."
+  reason: String!
+  "The current status of the loan request."
+  status: LoanStatus!
+  "The ID of the director who approved or rejected the loan."
+  approvedBy: String
+  "The date the loan was approved or rejected."
+  approvalDate: String
+  "Data URL of the applicant's signature."
+  signature: String!
+}
+
+"""
+Enum for the repayment term of a loan.
+"""
+enum LoanTerm {
+  unica
+  quincenal
+}
+
+"""
+Enum for the status of a loan request.
+"""
+enum LoanStatus {
+  Pendiente
+  Aprobado
+  Rechazado
+  Pagado
+}

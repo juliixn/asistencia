@@ -1,0 +1,26 @@
+
+"""
+Represents an employee of the security company.
+"""
+type Employee @table(key: "id") {
+  "The unique identifier for the employee."
+  id: String!
+  "The full name of the employee."
+  name: String!
+  "The role of the employee within the company."
+  role: EmployeeRole!
+  "The payment rate per shift for the employee."
+  shiftRate: Float!
+  "The email associated with the employee's user account for login."
+  email: String
+}
+
+"""
+Enum for the different roles an employee can have.
+"""
+enum EmployeeRole {
+  Guardia
+  Supervisor
+  Coordinador
+  Direccion
+}
