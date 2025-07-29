@@ -6,8 +6,8 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Employee } from '@/lib/types';
-import { listEmployees } from '@firebasegen/default-connector';
-import { getDataConnect } from '@/lib/dataconnect';
+// import { listEmployees } from '@firebasegen/default-connector';
+// import { getDataConnect } from '@/lib/dataconnect';
 import { initialEmployees } from '@/lib/data';
 
 
@@ -32,25 +32,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user && user.email) {
         try {
             // This will fail on first build, but succeed on subsequent builds
-            const dc = getDataConnect();
-            const {data: employees} = await listEmployees(dc, {
-                filter: { email: { eq: user.email }}
-            });
-            const foundEmployee = employees[0] || null;
+            // const dc = getDataConnect();
+            // const {data: employees} = await listEmployees(dc, {
+            //     filter: { email: { eq: user.email }}
+            // });
+            // const foundEmployee = employees[0] || null;
             
-            if (foundEmployee) {
-                 setEmployee({
-                    id: foundEmployee.employeeId,
-                    name: foundEmployee.name,
-                    role: foundEmployee.role as Employee['role'],
-                    shiftRate: foundEmployee.shiftRate,
-                    email: foundEmployee.email,
-                 });
-            } else {
-                setEmployee(null);
-            }
+            // if (foundEmployee) {
+            //      setEmployee({
+            //         id: foundEmployee.employeeId,
+            //         name: foundEmployee.name,
+            //         role: foundEmployee.role as Employee['role'],
+            //         shiftRate: foundEmployee.shiftRate,
+            //         email: foundEmployee.email,
+            //      });
+            // } else {
+            //     setEmployee(null);
+            // }
+            console.warn("DataConnect not ready, falling back to mock data for auth.");
+            // Fallback to initialEmployees if DataConnect fails (e.g., during build)
+            const foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
+            setEmployee(foundEmployee);
         } catch(e) {
-            console.warn("DataConnect not ready, falling back to mock data for auth.", e);
+            console.warn("DataConnect call failed, falling back to mock data for auth.", e);
             // Fallback to initialEmployees if DataConnect fails (e.g., during build)
             const foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
             setEmployee(foundEmployee);
@@ -95,3 +99,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
