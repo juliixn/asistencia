@@ -268,33 +268,6 @@ export default function GuardianPayrollPage() {
      return attendance[key];
   }
   
-  const handleSync = () => {
-    setIsSyncing(true);
-    toast({
-      title: 'Sincronizando...',
-      description: 'Guardando los datos de asistencia en el servidor.'
-    });
-    // Simulate API call
-    setTimeout(() => {
-      setIsSyncing(false);
-      toast({
-        title: 'Sincronización Completa',
-        description: 'Todos los registros han sido guardados.',
-      });
-    }, 2000);
-  };
-
-  const handleClearCache = () => {
-    if (window.confirm('¿Estás seguro de que quieres borrar todos los datos de asistencia locales? Esta acción no se puede deshacer.')) {
-      localStorage.removeItem('attendanceData');
-      setAttendance({});
-      toast({
-        title: 'Caché Limpiada',
-        description: 'Se han borrado los datos de asistencia locales.',
-      });
-    }
-  };
-  
   const handleExportIndividualPDF = (employeeName: string) => {
     toast({
         title: 'Exportando PDF Individual',
@@ -374,7 +347,7 @@ export default function GuardianPayrollPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
+        <div className="grid gap-6 lg:grid-cols-5 mb-6">
             <Card className="lg:col-span-3">
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
@@ -403,7 +376,7 @@ export default function GuardianPayrollPage() {
                     <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                     <ChartContainer config={pieChartConfig} className="h-64 w-full max-w-xs">
+                     <ChartContainer config={pieChartConfig} className="h-64 w-full">
                       <PieChart>
                         <ChartTooltip
                           cursor={false}
