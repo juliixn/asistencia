@@ -37,6 +37,8 @@ import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
 import { PlusCircle, FilePen, MoreHorizontal, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
 
 // Mock data for loans
 const initialLoans: LoanRequest[] = [
@@ -288,3 +290,5 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
     </DialogContent>
   )
 }
+
+    
