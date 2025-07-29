@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator } from 'lucide-react';
+import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator, AlertTriangle } from 'lucide-react';
 import { format, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -39,8 +39,10 @@ interface PayrollDetail {
     employeeId: string;
     employeeName: string;
     shiftsWorked: number;
+    lateArrivals: number;
     basePay: number;
     loanDeductions: number;
+    penalties: number;
     bonuses: number;
     netPay: number;
 }
@@ -56,6 +58,7 @@ export default function PayrollPage() {
     totalNetPay: 0,
     totalEmployees: 0,
     totalDeductions: 0,
+    totalPenalties: 0,
     totalBonuses: 0,
   });
 
@@ -80,23 +83,21 @@ export default function PayrollPage() {
 
         const calculatedPayroll = initialEmployees.map(employee => {
             let shiftsWorked = 0;
+            let lateArrivals = 0;
             
             for (let day = startDay; day <= endDay; day++) {
                 const dateStr = format(new Date(year, month, day), 'yyyy-MM-dd');
                 const dayKey = `${employee.id}-${dateStr}-day`;
                 const nightKey = `${employee.id}-${dateStr}-night`;
 
-                if (attendanceData[dayKey]?.status === 'Asistencia') {
-                    shiftsWorked++;
-                }
-                if (attendanceData[nightKey]?.status === 'Asistencia') {
-                    shiftsWorked++;
-                }
+                if (attendanceData[dayKey]?.status === 'Asistencia') shiftsWorked++;
+                if (attendanceData[nightKey]?.status === 'Asistencia') shiftsWorked++;
+                if (attendanceData[dayKey]?.status === 'Retardo') lateArrivals++;
+                if (attendanceData[nightKey]?.status === 'Retardo') lateArrivals++;
             }
 
             const basePay = shiftsWorked * employee.shiftRate;
 
-            // Simplified loan deduction: deduct one installment if loan is active and term is 'quincenal'
             const activeLoan = loanData.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
             let loanDeductions = 0;
             if (activeLoan && activeLoan.term === 'quincenal' && activeLoan.installments > 0) {
@@ -105,15 +106,20 @@ export default function PayrollPage() {
                  loanDeductions = activeLoan.amount;
             }
 
+            // Penalty logic: if 3 or more lates, penalize with 50% of shift rate
+            const penalties = lateArrivals >= 3 ? employee.shiftRate * 0.5 : 0;
+
             const bonuses = 0; // Placeholder for future bonus logic
-            const netPay = basePay - loanDeductions + bonuses;
+            const netPay = basePay - loanDeductions - penalties + bonuses;
 
             return {
                 employeeId: employee.id,
                 employeeName: employee.name,
                 shiftsWorked,
+                lateArrivals,
                 basePay,
                 loanDeductions,
+                penalties,
                 bonuses,
                 netPay,
             };
@@ -124,9 +130,10 @@ export default function PayrollPage() {
         const newSummary = calculatedPayroll.reduce((acc, item) => {
             acc.totalNetPay += item.netPay;
             acc.totalDeductions += item.loanDeductions;
+            acc.totalPenalties += item.penalties;
             acc.totalBonuses += item.bonuses;
             return acc;
-        }, { totalNetPay: 0, totalDeductions: 0, totalBonuses: 0 });
+        }, { totalNetPay: 0, totalDeductions: 0, totalPenalties: 0, totalBonuses: 0 });
 
         setSummary({
             ...newSummary,
@@ -158,27 +165,23 @@ export default function PayrollPage() {
     doc.setFontSize(12);
     doc.text(periodText, 14, 22);
 
-    const tableColumn = ["Empleado", "Turnos", "Sueldo Bruto", "Deducciones", "Bonos", "Pago Neto"];
+    const tableColumn = ["Empleado", "Turnos", "Retardos", "Sueldo Bruto", "Préstamos", "Penalización", "Bonos", "Pago Neto"];
     const tableRows: (string | number)[][] = [];
 
     payrollData.forEach(item => {
       const payrollItemData = [
         item.employeeName,
         item.shiftsWorked,
+        item.lateArrivals,
         `$${item.basePay.toFixed(2)}`,
         `-$${item.loanDeductions.toFixed(2)}`,
+        `-$${item.penalties.toFixed(2)}`,
         `+$${item.bonuses.toFixed(2)}`,
         `$${item.netPay.toFixed(2)}`,
       ];
       tableRows.push(payrollItemData);
     });
     
-    tableRows.push([
-        { content: 'TOTALES', colSpan: 4, styles: { fontStyle: 'bold' } },
-        { content: `-$${summary.totalDeductions.toFixed(2)}`, styles: { fontStyle: 'bold' } },
-        { content: `$${summary.totalNetPay.toFixed(2)}`, styles: { fontStyle: 'bold' } },
-    ]);
-
     doc.autoTable({
       head: [tableColumn],
       body: tableRows,
@@ -188,7 +191,7 @@ export default function PayrollPage() {
         fillColor: [22, 163, 74] 
       },
       foot: [
-          [{ content: `Total a Pagar: $${summary.totalNetPay.toFixed(2)}`, colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fontSize: 12 } }]
+          [{ content: `Total a Pagar: $${summary.totalNetPay.toFixed(2)}`, colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fontSize: 12 } }]
       ],
       footStyles: {
           fillColor: [244, 244, 245]
@@ -250,7 +253,7 @@ export default function PayrollPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
@@ -283,6 +286,16 @@ export default function PayrollPage() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Penalizaciones</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-2xl font-bold">$ {summary.totalPenalties.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Por 3 o más retardos</p>
+                    </CardContent>
+                </Card>
+                <Card className="xl:col-span-1">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Bonos y Extras</CardTitle>
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
@@ -308,8 +321,10 @@ export default function PayrollPage() {
                                         <TableRow>
                                             <TableHead>Empleado</TableHead>
                                             <TableHead className="text-center">Turnos</TableHead>
+                                            <TableHead className="text-center">Retardos</TableHead>
                                             <TableHead className="text-right">Sueldo Bruto</TableHead>
-                                            <TableHead className="text-right">Deducciones</TableHead>
+                                            <TableHead className="text-right">Préstamos</TableHead>
+                                            <TableHead className="text-right">Penalización</TableHead>
                                             <TableHead className="text-right">Bonos</TableHead>
                                             <TableHead className="text-right font-bold">Pago Neto</TableHead>
                                         </TableRow>
@@ -319,8 +334,10 @@ export default function PayrollPage() {
                                             <TableRow key={item.employeeId}>
                                                 <TableCell className="font-medium">{item.employeeName}</TableCell>
                                                 <TableCell className="text-center">{item.shiftsWorked}</TableCell>
+                                                <TableCell className="text-center">{item.lateArrivals}</TableCell>
                                                 <TableCell className="text-right">${item.basePay.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right text-destructive">-${item.loanDeductions.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-destructive">-${item.penalties.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right text-green-600">+${item.bonuses.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-bold">${item.netPay.toFixed(2)}</TableCell>
                                             </TableRow>
@@ -340,5 +357,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
