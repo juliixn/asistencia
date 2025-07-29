@@ -16,6 +16,7 @@ import {
   FileText,
   Settings,
   LogOut,
+  Landmark,
 } from "lucide-react";
 import { GuardianIcon } from "@/components/icons";
 
@@ -56,6 +57,12 @@ export function AppSidebar() {
               <span>Nómina</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Préstamos">
+              <Landmark />
+              <span>Préstamos</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
        <SidebarFooter>
@@ -77,3 +84,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

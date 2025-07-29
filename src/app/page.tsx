@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -49,8 +49,13 @@ import {
   User,
   X,
   FileDown,
+  RefreshCw,
+  TrendingUp,
+  DollarSign,
+  UserCheck,
+  FileText,
 } from 'lucide-react';
-import { add, format, getDate, getDaysInMonth, startOfMonth, sub } from 'date-fns';
+import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
@@ -66,15 +71,15 @@ const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
 ];
 
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
-  Asistencia: 'bg-green-200 text-green-800',
-  Retardo: 'bg-yellow-200 text-yellow-800',
-  Falta: 'bg-red-200 text-red-800',
-  Descanso: 'bg-blue-200 text-blue-800',
-  Incapacidad: 'bg-purple-200 text-purple-800',
-  Vacaciones: 'bg-indigo-200 text-indigo-800',
-  Enfermedad: 'bg-pink-200 text-pink-800',
-  'Permiso C/S': 'bg-cyan-200 text-cyan-800',
-  'Permiso S/S': 'bg-gray-200 text-gray-800',
+  Asistencia: 'bg-green-200 text-green-800 border border-green-300',
+  Retardo: 'bg-yellow-200 text-yellow-800 border border-yellow-300',
+  Falta: 'bg-red-200 text-red-800 border border-red-300',
+  Descanso: 'bg-blue-200 text-blue-800 border border-blue-300',
+  Incapacidad: 'bg-purple-200 text-purple-800 border border-purple-300',
+  Vacaciones: 'bg-indigo-200 text-indigo-800 border border-indigo-300',
+  Enfermedad: 'bg-pink-200 text-pink-800 border border-pink-300',
+  'Permiso C/S': 'bg-cyan-200 text-cyan-800 border border-cyan-300',
+  'Permiso S/S': 'bg-gray-200 text-gray-800 border border-gray-300',
 };
 
 export default function GuardianPayrollPage() {
@@ -87,8 +92,24 @@ export default function GuardianPayrollPage() {
     day: number;
     shift: 'day' | 'night';
   } | null>(null);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false);
 
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    setIsClient(true);
+    const storedAttendance = localStorage.getItem('attendanceData');
+    if (storedAttendance) {
+      setAttendance(JSON.parse(storedAttendance));
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isClient) {
+      localStorage.setItem('attendanceData', JSON.stringify(attendance));
+    }
+  }, [attendance, isClient]);
 
   const handlePeriodChange = (value: string) => {
     setPeriod(value as PayrollPeriod);
@@ -127,21 +148,90 @@ export default function GuardianPayrollPage() {
      const key = `${employeeId}-${date}-${shift}`;
      return attendance[key];
   }
+  
+  const handleSync = () => {
+    setIsSyncing(true);
+    toast({
+      title: 'Sincronizando...',
+      description: 'Guardando los datos de asistencia en el servidor.'
+    });
+    // Simulate API call
+    setTimeout(() => {
+      setIsSyncing(false);
+      toast({
+        title: 'Sincronización Completa',
+        description: 'Todos los registros han sido guardados.',
+      });
+    }, 2000);
+  };
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <div className="flex flex-col h-full">
-          <header className="p-4 border-b">
-            <h1 className="text-2xl font-headline font-bold">Registro de Asistencia</h1>
+        <div className="flex flex-col h-full bg-gray-50/50">
+          <header className="p-4 border-b bg-white shadow-sm">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-headline font-bold text-gray-800">Registro de Asistencia</h1>
+              <Button onClick={handleSync} disabled={isSyncing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+              </Button>
+            </div>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto">
-            <Card>
+            <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Asistencia Total (Turnos)</CardTitle>
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">1,234</div>
+                  <p className="text-xs text-muted-foreground">+5.2% desde el mes pasado</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Nómina Estimada</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">$45,231.89</div>
+                  <p className="text-xs text-muted-foreground">Periodo actual</p>
+                </CardContent>
+              </Card>
+               <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Horas Extra</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">+120</div>
+                  <p className="text-xs text-muted-foreground">Turnos dobles y tiempo extra</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Préstamos Activos</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">5</div>
+                   <p className="text-xs text-muted-foreground">Total de $12,500</p>
+                </CardContent>
+              </Card>
+            </div>
+            <Card className="shadow-lg border-t-4 border-primary">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-headline">
-                  {format(currentDate, 'MMMM yyyy', { locale: es })}
-                </CardTitle>
+                <div className="flex flex-col">
+                  <CardTitle className="font-headline text-xl">
+                    {format(currentDate, 'MMMM yyyy', { locale: es })}
+                  </CardTitle>
+                  <CardDescription>
+                    Selecciona un empleado y día para registrar la asistencia.
+                  </CardDescription>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
                     <ChevronLeft className="h-4 w-4" />
@@ -150,7 +240,7 @@ export default function GuardianPayrollPage() {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                   <Select value={period} onValueChange={handlePeriodChange}>
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-[180px] bg-white">
                       <CalendarDays className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Seleccionar periodo" />
                     </SelectTrigger>
@@ -166,13 +256,13 @@ export default function GuardianPayrollPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border">
                   <Table className="min-w-full whitespace-nowrap">
-                    <TableHeader>
+                    <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-card z-10 w-[200px]">Empleado</TableHead>
+                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[250px] font-semibold">Empleado</TableHead>
                         {daysInPeriod.map((day) => (
-                          <TableHead key={day} className="text-center w-28">
+                          <TableHead key={day} className="text-center w-28 font-semibold">
                             {day}
                           </TableHead>
                         ))}
@@ -180,14 +270,14 @@ export default function GuardianPayrollPage() {
                     </TableHeader>
                     <TableBody>
                       {initialEmployees.map((employee) => (
-                        <TableRow key={employee.id}>
-                          <TableCell className="sticky left-0 bg-card z-10 font-medium">
-                            <div className="flex items-center gap-2">
-                                <div className="bg-primary/20 text-primary rounded-full p-2">
+                        <TableRow key={employee.id} className="hover:bg-primary/5">
+                          <TableCell className="sticky left-0 bg-white z-10 font-medium">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-primary/10 text-primary rounded-full p-2.5">
                                     <User className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold">{employee.name}</p>
+                                    <p className="font-semibold text-gray-800">{employee.name}</p>
                                     <p className="text-xs text-muted-foreground">{employee.role}</p>
                                 </div>
                             </div>
@@ -195,13 +285,24 @@ export default function GuardianPayrollPage() {
                           {daysInPeriod.map((day) => {
                             const dayRecord = getRecordForCell(employee.id, day, 'day');
                             const nightRecord = getRecordForCell(employee.id, day, 'night');
+                            const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                            const isFuture = isAfter(cellDate, new Date());
+                            
                             return (
-                                <TableCell key={day} className="p-1 text-center border-l">
+                                <TableCell key={day} className="p-1 text-center border-l transition-colors duration-200 ease-in-out">
                                     <div className="flex flex-col gap-1">
-                                        <button onClick={() => handleCellClick(employee, day, 'day')} className={`w-full text-xs p-1 rounded-md transition-colors hover:bg-primary/10 ${dayRecord ? STATUS_COLORS[dayRecord.status] : ''}`}>
+                                        <button 
+                                          onClick={() => !isFuture && handleCellClick(employee, day, 'day')} 
+                                          className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
+                                          disabled={isFuture}
+                                        >
                                             {dayRecord?.status.charAt(0) || 'D'}
                                         </button>
-                                        <button onClick={() => handleCellClick(employee, day, 'night')} className={`w-full text-xs p-1 rounded-md transition-colors hover:bg-primary/10 ${nightRecord ? STATUS_COLORS[nightRecord.status] : ''}`}>
+                                        <button 
+                                          onClick={() => !isFuture && handleCellClick(employee, day, 'night')} 
+                                          className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
+                                          disabled={isFuture}
+                                        >
                                             {nightRecord?.status.charAt(0) || 'N'}
                                         </button>
                                     </div>
@@ -293,7 +394,7 @@ function UpdateAttendanceDialog({
                 {ATTENDANCE_STATUS_OPTIONS.map((opt) => (
                   <div key={opt}>
                     <RadioGroupItem value={opt} id={opt} className="sr-only" />
-                    <Label htmlFor={opt} className={`flex items-center justify-center p-2 rounded-md border-2 cursor-pointer ${status === opt ? 'border-primary' : 'border-transparent'} ${STATUS_COLORS[opt]}`}>
+                    <Label htmlFor={opt} className={`flex items-center justify-center p-2 rounded-md border-2 cursor-pointer transition-all duration-200 ${status === opt ? 'border-primary ring-2 ring-primary/50' : 'border-gray-200'} ${STATUS_COLORS[opt]}`}>
                       {opt}
                     </Label>
                   </div>
@@ -320,7 +421,7 @@ function UpdateAttendanceDialog({
             {status === 'Retardo' && (
               <div className="space-y-2">
                 <Label htmlFor="photo">Evidencia Fotográfica (Retardo)</Label>
-                <label className="flex w-full items-center gap-2 cursor-pointer rounded-md border border-dashed p-4 text-center text-muted-foreground hover:border-primary">
+                <label className="flex w-full items-center gap-2 cursor-pointer rounded-md border border-dashed p-4 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                     <Upload className="h-5 w-5" />
                     <span>{photo ? photo.name : "Subir imagen de WhatsApp"}</span>
                     <Input id="photo" type="file" accept="image/*" className="sr-only" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
@@ -347,3 +448,5 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
+
+    
