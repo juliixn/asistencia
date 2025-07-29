@@ -328,18 +328,6 @@ export default function GuardianPayrollPage() {
       <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Dashboard de Asistencia</h1>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleSync} disabled={isSyncing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
-              <span className="md:hidden">Sinc.</span>
-            </Button>
-            <Button variant="outline" onClick={handleClearCache}>
-              <Trash2 className="mr-2 h-4 w-4" />
-               <span className="hidden md:inline">Limpiar Caché</span>
-               <span className="md:hidden">Limpiar</span>
-            </Button>
-          </div>
         </div>
       </header>
       <main className="flex-1 p-2 md:p-6 overflow-auto">
