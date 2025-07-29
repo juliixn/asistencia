@@ -3,8 +3,6 @@
 
 import * as React from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -168,142 +166,137 @@ export default function LoansPage() {
 
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col h-full bg-gray-50/50">
-          <header className="p-4 border-b bg-white shadow-sm">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Préstamos</h1>
-              {canCreateRequest && (
-                <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2" />
-                      <span className="hidden md:inline">Nueva Solicitud</span>
-                      <span className="md:hidden">Añadir</span>
-                    </Button>
-                  </DialogTrigger>
-                  <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)}/>
-                </Dialog>
-              )}
-            </div>
-          </header>
-          <main className="flex-1 p-2 md:p-6 overflow-auto">
-            <Card className="shadow-lg border-t-4 border-primary">
-              <CardHeader>
-                <CardTitle>Solicitudes de Préstamos y Adelantos</CardTitle>
-                <CardDescription>
-                  Aquí puedes ver el historial de préstamos y aprobar o rechazar las solicitudes pendientes.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                 <div className="overflow-x-auto rounded-lg border">
-                  <Table>
-                    <TableHeader className="bg-gray-50/50">
-                      <TableRow>
-                        <TableHead className="px-4 py-3">Empleado</TableHead>
-                        <TableHead className="px-4 py-3 hidden sm:table-cell">Fecha Solicitud</TableHead>
-                        <TableHead className="px-4 py-3">Monto</TableHead>
-                        <TableHead className="px-4 py-3 hidden md:table-cell">Plazo</TableHead>
-                        <TableHead className="px-4 py-3">Estado</TableHead>
-                        <TableHead className="text-right px-4 py-3">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loans.map(loan => {
-                            const employee = initialEmployees.find(e => e.id === loan.employeeId);
-                            const StatusIcon = statusConfig[loan.status].icon;
-                            const isPending = loan.status === 'Pendiente';
-
-                            return (
-                                <TableRow key={loan.id}>
-                                    <TableCell className="font-medium px-4">{employee?.name || 'Desconocido'}</TableCell>
-                                    <TableCell className="hidden sm:table-cell px-4">{loan.requestDate}</TableCell>
-                                    <TableCell className="px-4">${loan.amount.toFixed(2)}</TableCell>
-                                    <TableCell className="hidden md:table-cell px-4">{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
-                                    <TableCell className="px-4">
-                                        <Badge variant="outline" className={`gap-1.5 whitespace-nowrap ${statusConfig[loan.status].className}`}>
-                                            <StatusIcon className="h-3.5 w-3.5" />
-                                            {statusConfig[loan.status].label}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right px-4">
-                                       <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button variant="ghost" size="icon">
-                                                  <MoreHorizontal className="h-4 w-4" />
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                              <DropdownMenuItem>
-                                                  <Eye className="mr-2 h-4 w-4"/>
-                                                  Ver Detalles
-                                              </DropdownMenuItem>
-                                              {canApproveRequest && isPending && (
-                                                <>
-                                                  <DropdownMenuSeparator />
-                                                  <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                      <DropdownMenuItem className="text-green-600 focus:text-green-700" onSelect={(e) => e.preventDefault()}>
-                                                        <ThumbsUp className="mr-2 h-4 w-4" />
-                                                        Aprobar
-                                                      </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Confirmar Aprobación?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                          Esta acción aprobará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
-                                                        </AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Aprobado')}>
-                                                          Confirmar
-                                                        </AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                  </AlertDialog>
-                                                  <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                                        <ThumbsDown className="mr-2 h-4 w-4" />
-                                                        Rechazar
-                                                      </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Confirmar Rechazo?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                          Esta acción rechazará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
-                                                        </AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Rechazado')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                          Rechazar Préstamo
-                                                        </AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                  </AlertDialog>
-                                                </>
-                                              )}
-                                          </DropdownMenuContent>
-                                       </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </main>
+    <div className="flex flex-col h-full bg-gray-50/50">
+      <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Préstamos</h1>
+          {canCreateRequest && (
+            <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <PlusCircle className="mr-2" />
+                  <span className="hidden md:inline">Nueva Solicitud</span>
+                  <span className="md:hidden">Añadir</span>
+                </Button>
+              </DialogTrigger>
+              <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)}/>
+            </Dialog>
+          )}
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </header>
+      <main className="flex-1 p-2 md:p-6 overflow-auto">
+        <Card className="shadow-lg border-t-4 border-primary">
+          <CardHeader>
+            <CardTitle>Solicitudes de Préstamos y Adelantos</CardTitle>
+            <CardDescription>
+              Aquí puedes ver el historial de préstamos y aprobar o rechazar las solicitudes pendientes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader className="bg-gray-50/50">
+                  <TableRow>
+                    <TableHead className="px-4 py-3">Empleado</TableHead>
+                    <TableHead className="px-4 py-3 hidden sm:table-cell">Fecha Solicitud</TableHead>
+                    <TableHead className="px-4 py-3">Monto</TableHead>
+                    <TableHead className="px-4 py-3 hidden md:table-cell">Plazo</TableHead>
+                    <TableHead className="px-4 py-3">Estado</TableHead>
+                    <TableHead className="text-right px-4 py-3">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {loans.map(loan => {
+                        const employee = initialEmployees.find(e => e.id === loan.employeeId);
+                        const StatusIcon = statusConfig[loan.status].icon;
+                        const isPending = loan.status === 'Pendiente';
+
+                        return (
+                            <TableRow key={loan.id}>
+                                <TableCell className="font-medium px-4">{employee?.name || 'Desconocido'}</TableCell>
+                                <TableCell className="hidden sm:table-cell px-4">{loan.requestDate}</TableCell>
+                                <TableCell className="px-4">${loan.amount.toFixed(2)}</TableCell>
+                                <TableCell className="hidden md:table-cell px-4">{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
+                                <TableCell className="px-4">
+                                    <Badge variant="outline" className={`gap-1.5 whitespace-nowrap ${statusConfig[loan.status].className}`}>
+                                        <StatusIcon className="h-3.5 w-3.5" />
+                                        {statusConfig[loan.status].label}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right px-4">
+                                   <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                          <DropdownMenuItem>
+                                              <Eye className="mr-2 h-4 w-4"/>
+                                              Ver Detalles
+                                          </DropdownMenuItem>
+                                          {canApproveRequest && isPending && (
+                                            <>
+                                              <DropdownMenuSeparator />
+                                              <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                  <DropdownMenuItem className="text-green-600 focus:text-green-700" onSelect={(e) => e.preventDefault()}>
+                                                    <ThumbsUp className="mr-2 h-4 w-4" />
+                                                    Aprobar
+                                                  </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Confirmar Aprobación?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                      Esta acción aprobará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
+                                                    </AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Aprobado')}>
+                                                      Confirmar
+                                                    </AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                              </AlertDialog>
+                                              <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                    <ThumbsDown className="mr-2 h-4 w-4" />
+                                                    Rechazar
+                                                  </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Confirmar Rechazo?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                      Esta acción rechazará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
+                                                    </AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Rechazado')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                      Rechazar Préstamo
+                                                    </AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                              </AlertDialog>
+                                            </>
+                                          )}
+                                      </DropdownMenuContent>
+                                   </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        )
+                    })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   )
 }
 

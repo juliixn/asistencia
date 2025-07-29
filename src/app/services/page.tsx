@@ -2,8 +2,6 @@
 'use client';
 
 import * as React from 'react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -90,100 +88,95 @@ export default function ServicesPage() {
     }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col h-full bg-gray-50/50">
-            <header className="p-4 border-b bg-white shadow-sm">
-                <div className="flex items-center justify-between">
-                <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
-                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2" />
-                        Añadir Servicio
-                    </Button>
-                  </DialogTrigger>
-                  <ServiceDialog onSave={handleAddService} />
-                </Dialog>
-                </div>
-            </header>
-            <main className="flex-1 p-2 md:p-6 overflow-auto">
-                <Card className="shadow-lg border-t-4 border-primary">
-                    <CardHeader>
-                        <CardTitle>Listado de Centros de Trabajo</CardTitle>
-                        <CardDescription>
-                        Aquí puedes ver y gestionar los lugares donde se presta servicio.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <div className="overflow-x-auto rounded-lg border">
-                            <Table>
-                                <TableHeader className="bg-gray-50">
-                                <TableRow>
-                                    <TableHead className="px-4 py-3 w-[80%]">Nombre del Servicio</TableHead>
-                                    <TableHead className="text-right px-4 py-3">Acciones</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {services.map((location) => (
-                                        <TableRow key={location.id}>
-                                            <TableCell className="font-medium px-4">{location.name}</TableCell>
-                                            <TableCell className="text-right px-4">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                         <DropdownMenuItem onClick={() => handleEdit(location)}>
-                                                            <Edit className="mr-2 h-4 w-4"/>
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Eliminar
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Esta acción no se puede deshacer. Se eliminará permanentemente el servicio.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(location.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                                        Confirmar
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </main>
-             <Dialog open={!!editingService} onOpenChange={(isOpen) => !isOpen && setEditingService(null)}>
-                {editingService && <ServiceDialog
-                    service={editingService}
-                    onSave={(data) => handleUpdateService({ ...editingService, ...data})}
-                    onClose={() => setEditingService(null)}
-                />}
+    <div className="flex flex-col h-full bg-gray-50/50">
+        <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
+             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                    <PlusCircle className="mr-2" />
+                    Añadir Servicio
+                </Button>
+              </DialogTrigger>
+              <ServiceDialog onSave={handleAddService} />
             </Dialog>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+            </div>
+        </header>
+        <main className="flex-1 p-2 md:p-6 overflow-auto">
+            <Card className="shadow-lg border-t-4 border-primary">
+                <CardHeader>
+                    <CardTitle>Listado de Centros de Trabajo</CardTitle>
+                    <CardDescription>
+                    Aquí puedes ver y gestionar los lugares donde se presta servicio.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="overflow-x-auto rounded-lg border">
+                        <Table>
+                            <TableHeader className="bg-gray-50">
+                            <TableRow>
+                                <TableHead className="px-4 py-3 w-[80%]">Nombre del Servicio</TableHead>
+                                <TableHead className="text-right px-4 py-3">Acciones</TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {services.map((location) => (
+                                    <TableRow key={location.id}>
+                                        <TableCell className="font-medium px-4">{location.name}</TableCell>
+                                        <TableCell className="text-right px-4">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                     <DropdownMenuItem onClick={() => handleEdit(location)}>
+                                                        <Edit className="mr-2 h-4 w-4"/>
+                                                        Editar
+                                                    </DropdownMenuItem>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Esta acción no se puede deshacer. Se eliminará permanentemente el servicio.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(location.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                    Confirmar
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </main>
+         <Dialog open={!!editingService} onOpenChange={(isOpen) => !isOpen && setEditingService(null)}>
+            {editingService && <ServiceDialog
+                service={editingService}
+                onSave={(data) => handleUpdateService({ ...editingService, ...data})}
+                onClose={() => setEditingService(null)}
+            />}
+        </Dialog>
+    </div>
   );
 }
 

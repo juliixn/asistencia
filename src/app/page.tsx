@@ -2,8 +2,6 @@
 'use client';
 
 import * as React from 'react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -321,252 +319,242 @@ export default function GuardianPayrollPage() {
 
   if (!isClient) {
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                <div className="flex items-center justify-center h-full">Cargando...</div>
-            </SidebarInset>
-        </SidebarProvider>
+        <div className="flex items-center justify-center h-full">Cargando...</div>
     );
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col h-full bg-gray-50/50">
-          <header className="p-4 border-b bg-white shadow-sm">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Dashboard de Asistencia</h1>
+    <div className="flex flex-col h-full bg-gray-50/50">
+      <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Dashboard de Asistencia</h1>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSync} disabled={isSyncing}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+              <span className="md:hidden">Sinc.</span>
+            </Button>
+            <Button variant="outline" onClick={handleClearCache}>
+              <Trash2 className="mr-2 h-4 w-4" />
+               <span className="hidden md:inline">Limpiar Caché</span>
+               <span className="md:hidden">Limpiar</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 p-2 md:p-6 overflow-auto">
+        <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Asistencia del Mes (Turnos)</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.totalAttendance}</div>
+              <p className="text-xs text-muted-foreground">Total de turnos con asistencia</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Nómina Estimada (Mes)</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${dashboardStats.estimatedPayroll.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Estimación basada en asistencias</p>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Faltas y Retardos (Mes)</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.absencesAndLates}</div>
+              <p className="text-xs text-muted-foreground">Total de incidencias negativas</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Préstamos Activos</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats.activeLoans}</div>
+               <p className="text-xs text-muted-foreground">Total de ${dashboardStats.activeLoansAmount.toFixed(2)}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
+            <Card className="lg:col-span-3">
+                <CardHeader>
+                    <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <ChartContainer config={barChartConfig} className="h-64 w-full">
+                        <BarChart accessibilityLayer data={dashboardStats.barChartData}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis
+                            dataKey="month"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            tickFormatter={(value) => value.slice(0, 3)}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            <Bar dataKey="Asistencias" fill="var(--color-Asistencias)" radius={4} />
+                            <Bar dataKey="Faltas" fill="var(--color-Faltas)" radius={4} />
+                        </BarChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                     <ChartContainer config={pieChartConfig} className="h-64 w-full max-w-xs">
+                      <PieChart>
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                        />
+                         <Pie
+                          data={dashboardStats.pieChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={60}
+                          strokeWidth={5}
+                        >
+                           {dashboardStats.pieChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <ChartLegend
+                          content={<ChartLegendContent nameKey="name" />}
+                          className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                        />
+                      </PieChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+        </div>
+        
+        <Card className="shadow-lg border-t-4 border-primary">
+          <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col">
+              <CardTitle className="font-headline text-lg md:text-xl">
+                Registro de Asistencia: {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Selecciona un empleado y día para registrar la asistencia.
+              </CardDescription>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <div className="flex items-center gap-2">
-                <Button onClick={handleSync} disabled={isSyncing}>
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
-                  <span className="md:hidden">Sinc.</span>
+                <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={handleClearCache}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                   <span className="hidden md:inline">Limpiar Caché</span>
-                   <span className="md:hidden">Limpiar</span>
+                <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
+              <Select value={period} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="w-full sm:w-[180px] bg-white">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Seleccionar periodo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1-15">Días 1-15</SelectItem>
+                  <SelectItem value="16-end">Días 16 al final</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button className="w-full sm:w-auto">
+                <FileDown className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Exportar PDF</span>
+                <span className="sm:hidden">Exportar</span>
+              </Button>
             </div>
-          </header>
-          <main className="flex-1 p-2 md:p-6 overflow-auto">
-            <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Asistencia del Mes (Turnos)</CardTitle>
-                  <UserCheck className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.totalAttendance}</div>
-                  <p className="text-xs text-muted-foreground">Total de turnos con asistencia</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Nómina Estimada (Mes)</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${dashboardStats.estimatedPayroll.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">Estimación basada en asistencias</p>
-                </CardContent>
-              </Card>
-               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Faltas y Retardos (Mes)</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.absencesAndLates}</div>
-                  <p className="text-xs text-muted-foreground">Total de incidencias negativas</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Préstamos Activos</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{dashboardStats.activeLoans}</div>
-                   <p className="text-xs text-muted-foreground">Total de ${dashboardStats.activeLoansAmount.toFixed(2)}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
-                <Card className="lg:col-span-3">
-                    <CardHeader>
-                        <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ChartContainer config={barChartConfig} className="h-64 w-full">
-                            <BarChart accessibilityLayer data={dashboardStats.barChartData}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis
-                                dataKey="month"
-                                tickLine={false}
-                                tickMargin={10}
-                                axisLine={false}
-                                tickFormatter={(value) => value.slice(0, 3)}
-                                />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <ChartLegend content={<ChartLegendContent />} />
-                                <Bar dataKey="Asistencias" fill="var(--color-Asistencias)" radius={4} />
-                                <Bar dataKey="Faltas" fill="var(--color-Faltas)" radius={4} />
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-                <Card className="lg:col-span-2">
-                    <CardHeader>
-                        <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex justify-center">
-                         <ChartContainer config={pieChartConfig} className="h-64 w-full max-w-xs">
-                          <PieChart>
-                            <ChartTooltip
-                              cursor={false}
-                              content={<ChartTooltipContent hideLabel />}
-                            />
-                             <Pie
-                              data={dashboardStats.pieChartData}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={60}
-                              strokeWidth={5}
-                            >
-                               {dashboardStats.pieChartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} />
-                              ))}
-                            </Pie>
-                            <ChartLegend
-                              content={<ChartLegendContent nameKey="name" />}
-                              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-                            />
-                          </PieChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <Card className="shadow-lg border-t-4 border-primary">
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex flex-col">
-                  <CardTitle className="font-headline text-lg md:text-xl">
-                    Registro de Asistencia: {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    Selecciona un empleado y día para registrar la asistencia.
-                  </CardDescription>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Select value={period} onValueChange={handlePeriodChange}>
-                    <SelectTrigger className="w-full sm:w-[180px] bg-white">
-                      <CalendarDays className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Seleccionar periodo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-15">Días 1-15</SelectItem>
-                      <SelectItem value="16-end">Días 16 al final</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button className="w-full sm:w-auto">
-                    <FileDown className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Exportar PDF</span>
-                    <span className="sm:hidden">Exportar</span>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0 sm:p-2">
-                <div className="overflow-x-auto rounded-lg border">
-                  <Table className="min-w-full whitespace-nowrap">
-                    <TableHeader className="bg-gray-50">
-                      <TableRow>
-                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[200px] md:w-[250px] font-semibold px-2 py-3 sm:px-4">Empleado</TableHead>
-                        {daysInPeriod.map((day) => (
-                          <TableHead key={day} className="text-center w-20 md:w-24 font-semibold px-1 py-3">
-                            {day}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {initialEmployees.map((employee) => (
-                        <TableRow key={employee.id} className="hover:bg-primary/5">
-                          <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 sm:gap-3">
-                                    <div className="bg-primary/10 text-primary rounded-full p-2">
-                                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{employee.name}</p>
-                                        <p className="text-xs text-muted-foreground">{employee.role}</p>
-                                    </div>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-2">
+            <div className="overflow-x-auto rounded-lg border">
+              <Table className="min-w-full whitespace-nowrap">
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-gray-50 z-10 w-[200px] md:w-[250px] font-semibold px-2 py-3 sm:px-4">Empleado</TableHead>
+                    {daysInPeriod.map((day) => (
+                      <TableHead key={day} className="text-center w-20 md:w-24 font-semibold px-1 py-3">
+                        {day}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {initialEmployees.map((employee) => (
+                    <TableRow key={employee.id} className="hover:bg-primary/5">
+                      <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="bg-primary/10 text-primary rounded-full p-2">
+                                    <User className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            <span>Exportar Nómina Individual</span>
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <div>
+                                    <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{employee.name}</p>
+                                    <p className="text-xs text-muted-foreground">{employee.role}</p>
+                                </div>
                             </div>
-                          </TableCell>
-                          {daysInPeriod.map((day) => {
-                            const dayRecord = getRecordForCell(employee.id, day, 'day');
-                            const nightRecord = getRecordForCell(employee.id, day, 'night');
-                            const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                            const isFuture = isAfter(cellDate, new Date());
-                            
-                            return (
-                                <TableCell key={day} className="p-1 text-center border-l transition-colors duration-200 ease-in-out">
-                                    <div className="flex flex-col gap-1">
-                                        <button 
-                                          onClick={() => !isFuture && handleCellClick(employee, day, 'day')} 
-                                          className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
-                                          disabled={isFuture}
-                                        >
-                                            {dayRecord?.status.charAt(0) || 'D'}
-                                        </button>
-                                        <button 
-                                          onClick={() => !isFuture && handleCellClick(employee, day, 'night')} 
-                                          className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
-                                          disabled={isFuture}
-                                        >
-                                            {nightRecord?.status.charAt(0) || 'N'}
-                                        </button>
-                                    </div>
-                                </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </main>
-        </div>
-      </SidebarInset>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        <span>Exportar Nómina Individual</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                      </TableCell>
+                      {daysInPeriod.map((day) => {
+                        const dayRecord = getRecordForCell(employee.id, day, 'day');
+                        const nightRecord = getRecordForCell(employee.id, day, 'night');
+                        const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                        const isFuture = isAfter(cellDate, new Date());
+                        
+                        return (
+                            <TableCell key={day} className="p-1 text-center border-l transition-colors duration-200 ease-in-out">
+                                <div className="flex flex-col gap-1">
+                                    <button 
+                                      onClick={() => !isFuture && handleCellClick(employee, day, 'day')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
+                                      disabled={isFuture}
+                                    >
+                                        {dayRecord?.status.charAt(0) || 'D'}
+                                    </button>
+                                    <button 
+                                      onClick={() => !isFuture && handleCellClick(employee, day, 'night')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
+                                      disabled={isFuture}
+                                    >
+                                        {nightRecord?.status.charAt(0) || 'N'}
+                                    </button>
+                                </div>
+                            </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
       {selectedCell && (
         <UpdateAttendanceDialog
           isOpen={dialogOpen}
@@ -576,7 +564,7 @@ export default function GuardianPayrollPage() {
           currentRecord={getRecordForCell(selectedCell.employee.id, selectedCell.day, selectedCell.shift)}
         />
       )}
-    </SidebarProvider>
+    </div>
   );
 }
 

@@ -2,8 +2,6 @@
 'use client';
 
 import * as React from 'react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -135,144 +133,139 @@ export default function PayrollPage() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <div className="flex flex-col h-full bg-gray-50/50">
-            <header className="p-4 border-b bg-white shadow-sm">
-                <div className="flex items-center justify-between">
-                <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Cálculo de Nómina</h1>
-                 <div className="flex items-center gap-2">
-                     <Button disabled>
-                        <CheckCircle className="mr-2" />
-                        Cerrar Periodo de Nómina
+    <div className="flex flex-col h-full bg-gray-50/50">
+        <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
+            <div className="flex items-center justify-between">
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Cálculo de Nómina</h1>
+             <div className="flex items-center gap-2">
+                 <Button disabled>
+                    <CheckCircle className="mr-2" />
+                    Cerrar Periodo de Nómina
+                </Button>
+                <Button variant="outline" disabled>
+                    <FileDown className="mr-2" />
+                    Exportar Reporte General
+                </Button>
+             </div>
+            </div>
+        </header>
+        <main className="flex-1 p-2 md:p-6 overflow-auto">
+             <Card className="shadow-lg border-t-4 border-primary mb-6">
+                <CardHeader>
+                    <CardTitle className="font-headline">
+                        Calculadora de Nómina
+                    </CardTitle>
+                    <CardDescription>
+                        Selecciona el periodo para calcular y visualizar la nómina de los empleados.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="flex-1 w-full">
+                        <Select value={period} onValueChange={(v) => setPeriod(v as PayrollPeriod)}>
+                            <SelectTrigger className="bg-white">
+                            <CalendarDays className="mr-2 h-4 w-4" />
+                            <SelectValue placeholder="Seleccionar periodo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="1-15">Periodo: 1-15 {format(currentDate, 'MMMM yyyy', { locale: es })}</SelectItem>
+                                <SelectItem value="16-end">Periodo: 16-fin {format(currentDate, 'MMMM yyyy', { locale: es })}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Button className="w-full md:w-auto" onClick={handleCalculatePayroll} disabled={isCalculating}>
+                        <Calculator className="mr-2" />
+                        {isCalculating ? 'Calculando...' : 'Calcular Nómina'}
                     </Button>
-                    <Button variant="outline" disabled>
-                        <FileDown className="mr-2" />
-                        Exportar Reporte General
-                    </Button>
-                 </div>
-                </div>
-            </header>
-            <main className="flex-1 p-2 md:p-6 overflow-auto">
-                 <Card className="shadow-lg border-t-4 border-primary mb-6">
-                    <CardHeader>
-                        <CardTitle className="font-headline">
-                            Calculadora de Nómina
-                        </CardTitle>
-                        <CardDescription>
-                            Selecciona el periodo para calcular y visualizar la nómina de los empleados.
-                        </CardDescription>
+                </CardContent>
+            </Card>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="flex flex-col md:flex-row items-center gap-4">
-                        <div className="flex-1 w-full">
-                            <Select value={period} onValueChange={(v) => setPeriod(v as PayrollPeriod)}>
-                                <SelectTrigger className="bg-white">
-                                <CalendarDays className="mr-2 h-4 w-4" />
-                                <SelectValue placeholder="Seleccionar periodo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="1-15">Periodo: 1-15 {format(currentDate, 'MMMM yyyy', { locale: es })}</SelectItem>
-                                    <SelectItem value="16-end">Periodo: 16-fin {format(currentDate, 'MMMM yyyy', { locale: es })}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button className="w-full md:w-auto" onClick={handleCalculatePayroll} disabled={isCalculating}>
-                            <Calculator className="mr-2" />
-                            {isCalculating ? 'Calculando...' : 'Calcular Nómina'}
-                        </Button>
+                    <CardContent>
+                    <div className="text-2xl font-bold">$ {summary.totalNetPay.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Nómina neta del periodo</p>
                     </CardContent>
                 </Card>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                     <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                        <div className="text-2xl font-bold">$ {summary.totalNetPay.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">Nómina neta del periodo</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Empleados en Nómina</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                        <div className="text-2xl font-bold">+{summary.totalEmployees}</div>
-                        <p className="text-xs text-muted-foreground">Total de empleados activos</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Préstamos</CardTitle>
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                        <div className="text-2xl font-bold">$ {summary.totalDeductions.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">Descuentos del periodo</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Bonos y Extras</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                        <div className="text-2xl font-bold">$ {summary.totalBonuses.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">Pagos adicionales</p>
-                        </CardContent>
-                    </Card>
-                </div>
-                 <div className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Pre-nómina del Periodo: {period === '1-15' ? '1-15' : `16-${getDaysInMonth(currentDate)}`} de {format(currentDate, 'MMMM', { locale: es })}</CardTitle>
-                            <CardDescription>
-                                Aquí se muestra el desglose de la nómina por empleado.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           {payrollData.length > 0 ? (
-                                <div className="overflow-x-auto rounded-lg border">
-                                    <Table>
-                                        <TableHeader className="bg-gray-50/50">
-                                            <TableRow>
-                                                <TableHead>Empleado</TableHead>
-                                                <TableHead className="text-center">Turnos</TableHead>
-                                                <TableHead className="text-right">Sueldo Bruto</TableHead>
-                                                <TableHead className="text-right">Deducciones</TableHead>
-                                                <TableHead className="text-right">Bonos</TableHead>
-                                                <TableHead className="text-right font-bold">Pago Neto</TableHead>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Empleados en Nómina</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-2xl font-bold">+{summary.totalEmployees}</div>
+                    <p className="text-xs text-muted-foreground">Total de empleados activos</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Préstamos</CardTitle>
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-2xl font-bold">$ {summary.totalDeductions.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Descuentos del periodo</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Bonos y Extras</CardTitle>
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                    <div className="text-2xl font-bold">$ {summary.totalBonuses.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Pagos adicionales</p>
+                    </CardContent>
+                </Card>
+            </div>
+             <div className="mt-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Pre-nómina del Periodo: {period === '1-15' ? '1-15' : `16-${getDaysInMonth(currentDate)}`} de {format(currentDate, 'MMMM', { locale: es })}</CardTitle>
+                        <CardDescription>
+                            Aquí se muestra el desglose de la nómina por empleado.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       {payrollData.length > 0 ? (
+                            <div className="overflow-x-auto rounded-lg border">
+                                <Table>
+                                    <TableHeader className="bg-gray-50/50">
+                                        <TableRow>
+                                            <TableHead>Empleado</TableHead>
+                                            <TableHead className="text-center">Turnos</TableHead>
+                                            <TableHead className="text-right">Sueldo Bruto</TableHead>
+                                            <TableHead className="text-right">Deducciones</TableHead>
+                                            <TableHead className="text-right">Bonos</TableHead>
+                                            <TableHead className="text-right font-bold">Pago Neto</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {payrollData.map(item => (
+                                            <TableRow key={item.employeeId}>
+                                                <TableCell className="font-medium">{item.employeeName}</TableCell>
+                                                <TableCell className="text-center">{item.shiftsWorked}</TableCell>
+                                                <TableCell className="text-right">${item.basePay.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-destructive">-${item.loanDeductions.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-green-600">+${item.bonuses.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-bold">${item.netPay.toFixed(2)}</TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {payrollData.map(item => (
-                                                <TableRow key={item.employeeId}>
-                                                    <TableCell className="font-medium">{item.employeeName}</TableCell>
-                                                    <TableCell className="text-center">{item.shiftsWorked}</TableCell>
-                                                    <TableCell className="text-right">${item.basePay.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right text-destructive">-${item.loanDeductions.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right text-green-600">+${item.bonuses.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right font-bold">${item.netPay.toFixed(2)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                           ) : (
-                                <p className="text-center text-muted-foreground py-12">
-                                    {isCalculating ? 'Procesando datos...' : 'Presiona "Calcular Nómina" para ver los resultados.'}
-                                </p>
-                           )}
-                        </CardContent>
-                    </Card>
-                 </div>
-            </main>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                       ) : (
+                            <p className="text-center text-muted-foreground py-12">
+                                {isCalculating ? 'Procesando datos...' : 'Presiona "Calcular Nómina" para ver los resultados.'}
+                            </p>
+                       )}
+                    </CardContent>
+                </Card>
+             </div>
+        </main>
+    </div>
   );
 }
