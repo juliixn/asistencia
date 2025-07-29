@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -58,6 +59,7 @@ export default function EmployeesPage() {
     const { toast } = useToast();
     const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+    const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
 
     const handleDelete = (employeeId: string) => {
         const employeeName = employees.find(e => e.id === employeeId)?.name;
@@ -68,11 +70,17 @@ export default function EmployeesPage() {
         });
     }
   
-    const handleEdit = (employeeName: string) => {
+    const handleEdit = (employee: Employee) => {
+        setEditingEmployee(employee);
+    }
+    
+    const handleUpdateEmployee = (updatedEmployee: Employee) => {
+        setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
         toast({
-            title: "Función no implementada",
-            description: `La edición de ${employeeName} estará disponible pronto.`
+            title: "Empleado Actualizado",
+            description: `Se ha actualizado la información de ${updatedEmployee.name}.`,
         });
+        setEditingEmployee(null);
     }
 
     const handleAddEmployee = (newEmployee: Omit<Employee, 'id'>) => {
@@ -103,7 +111,7 @@ export default function EmployeesPage() {
                             Añadir Empleado
                         </Button>
                       </DialogTrigger>
-                      <AddEmployeeDialog onSave={handleAddEmployee} />
+                      <EmployeeDialog onSave={handleAddEmployee} />
                     </Dialog>
                     </div>
                 </header>
@@ -142,7 +150,7 @@ export default function EmployeesPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(employee.name)}>
+                                                <DropdownMenuItem onClick={() => handleEdit(employee)}>
                                                     <Edit className="mr-2 h-4 w-4"/>
                                                     Editar
                                                 </DropdownMenuItem>
@@ -180,6 +188,13 @@ export default function EmployeesPage() {
                     </CardContent>
                     </Card>
                 </main>
+                <Dialog open={!!editingEmployee} onOpenChange={(isOpen) => !isOpen && setEditingEmployee(null)}>
+                    {editingEmployee && <EmployeeDialog
+                        employee={editingEmployee}
+                        onSave={(data) => handleUpdateEmployee({ ...editingEmployee, ...data})}
+                        onClose={() => setEditingEmployee(null)}
+                    />}
+                </Dialog>
             </div>
         </SidebarInset>
         </SidebarProvider>
@@ -187,11 +202,21 @@ export default function EmployeesPage() {
 }
 
 
-function AddEmployeeDialog({ onSave }: { onSave: (data: Omit<Employee, 'id'>) => void}) {
-  const [name, setName] = React.useState('');
-  const [role, setRole] = React.useState<EmployeeRole | ''>('');
-  const [shiftRate, setShiftRate] = React.useState<number>(0);
+function EmployeeDialog({
+  onSave,
+  employee,
+  onClose,
+}: { 
+  onSave: (data: Omit<Employee, 'id'>) => void;
+  employee?: Employee;
+  onClose?: () => void;
+}) {
+  const [name, setName] = React.useState(employee?.name || '');
+  const [role, setRole] = React.useState<EmployeeRole | ''>(employee?.role || '');
+  const [shiftRate, setShiftRate] = React.useState<number>(employee?.shiftRate || 0);
   const { toast } = useToast();
+
+  const isEditing = !!employee;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,7 +235,9 @@ function AddEmployeeDialog({ onSave }: { onSave: (data: Omit<Employee, 'id'>) =>
     <DialogContent className="w-[95%] sm:max-w-lg rounded-lg">
         <form onSubmit={handleSubmit}>
             <DialogHeader>
-                <DialogTitle className="font-headline text-lg sm:text-xl">Añadir Nuevo Empleado</DialogTitle>
+                <DialogTitle className="font-headline text-lg sm:text-xl">
+                    {isEditing ? 'Editar Empleado' : 'Añadir Nuevo Empleado'}
+                </DialogTitle>
             </DialogHeader>
             <div className="py-4 grid gap-4">
                 <div className="space-y-2">
@@ -239,10 +266,12 @@ function AddEmployeeDialog({ onSave }: { onSave: (data: Omit<Employee, 'id'>) =>
                 </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
-                <DialogClose asChild>
-                    <Button type="button" variant="outline" className="w-full sm:w-auto">Cancelar</Button>
+                 <DialogClose asChild>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose}>Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" className="w-full sm:w-auto">Guardar Empleado</Button>
+                <Button type="submit" className="w-full sm:w-auto">
+                    {isEditing ? 'Guardar Cambios' : 'Guardar Empleado'}
+                </Button>
             </DialogFooter>
         </form>
     </DialogContent>
