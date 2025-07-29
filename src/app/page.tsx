@@ -2,6 +2,8 @@
 'use client';
 
 import * as React from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,15 +55,13 @@ import {
   Upload,
   User,
   FileDown,
-  RefreshCw,
   DollarSign,
   UserCheck,
   FileText,
   MoreVertical,
   AlertTriangle,
-  Trash2,
 } from 'lucide-react';
-import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, eachDayOfInterval, getMonth, getYear, parseISO } from 'date-fns';
+import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMonth, getYear, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   ChartContainer,
@@ -74,6 +74,11 @@ import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from "rechar
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
   'Asistencia',
@@ -119,7 +124,6 @@ export default function GuardianPayrollPage() {
     day: number;
     shift: 'day' | 'night';
   } | null>(null);
-  const [isSyncing, setIsSyncing] = React.useState(false);
   const [isClient, setIsClient] = React.useState(false);
 
   // States for dashboard data
@@ -274,11 +278,133 @@ export default function GuardianPayrollPage() {
      return attendance[key];
   }
   
-  const handleExportIndividualPDF = (employeeName: string) => {
+  const handleExportIndividualPDF = (employeeId: string) => {
+    const employee = initialEmployees.find(e => e.id === employeeId);
+    if (!employee) return;
+
     toast({
-        title: 'Exportando PDF Individual',
-        description: `Generando la nómina para ${employeeName}.`
+        title: 'Exportando PDF...',
+        description: `Generando la nómina para ${employee.name}.`
     });
+
+    const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
+    const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = getDaysInMonth(currentDate);
+    const startDay = period === '1-15' ? 1 : 16;
+    const endDay = period === '1-15' ? 15 : daysInMonth;
+
+    let shiftsWorked = 0;
+    let lateArrivals = 0;
+    let absences = 0;
+
+    for (let day = startDay; day <= endDay; day++) {
+        const dateStr = format(new Date(year, month, day), 'yyyy-MM-dd');
+        const dayKey = `${employee.id}-${dateStr}-day`;
+        const nightKey = `${employee.id}-${dateStr}-night`;
+
+        if (attendanceData[dayKey]?.status === 'Asistencia') shiftsWorked++;
+        if (attendanceData[nightKey]?.status === 'Asistencia') shiftsWorked++;
+        if (attendanceData[dayKey]?.status === 'Retardo') lateArrivals++;
+        if (attendanceData[nightKey]?.status === 'Retardo') lateArrivals++;
+        if (attendanceData[dayKey]?.status === 'Falta') absences++;
+        if (attendanceData[nightKey]?.status === 'Falta') absences++;
+    }
+
+    const basePay = shiftsWorked * employee.shiftRate;
+
+    const activeLoan = loanData.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
+    let loanDeductions = 0;
+    if (activeLoan && activeLoan.term === 'quincenal' && activeLoan.installments > 0) {
+        loanDeductions = activeLoan.amount / activeLoan.installments;
+    } else if (activeLoan && activeLoan.term === 'única') {
+        loanDeductions = activeLoan.amount;
+    }
+
+    const bonuses = 0; // Placeholder
+    const otherDeductions = 0; // Placeholder
+    const netPay = basePay + bonuses - loanDeductions - otherDeductions;
+    
+    const doc = new jsPDF();
+    const periodText = `Periodo: ${startDay}-${endDay} de ${format(currentDate, 'MMMM yyyy', { locale: es })}`;
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('Recibo de Nómina', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Guardian Payroll', 105, 28, { align: 'center' });
+
+    // Employee Info
+    doc.setFontSize(14);
+    doc.text('Información del Empleado', 14, 45);
+    doc.autoTable({
+        startY: 50,
+        body: [
+            ['Nombre', employee.name],
+            ['Puesto', employee.role],
+            ['Periodo de Pago', periodText],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 10 },
+    });
+
+    // Payroll Details
+    const finalY = (doc as any).lastAutoTable.finalY || 70;
+    doc.setFontSize(14);
+    doc.text('Desglose de Pago', 14, finalY + 15);
+
+    const perceptions = [
+        ['Sueldo por Turnos Trabajados', `${shiftsWorked} turnos`, `$${basePay.toFixed(2)}`],
+        ['Bonos Adicionales', '', `$${bonuses.toFixed(2)}`],
+    ];
+    
+    const deductions = [
+        ['Adelantos / Préstamos', '', `-$${loanDeductions.toFixed(2)}`],
+        ['Otras Deducciones', '', `-$${otherDeductions.toFixed(2)}`],
+    ];
+
+    doc.autoTable({
+        startY: finalY + 20,
+        head: [['PERCEPCIONES', 'Detalle', 'Monto']],
+        body: perceptions,
+        theme: 'striped',
+        headStyles: { fillColor: [22, 163, 74], textColor: 255 },
+    });
+
+    const secondTableY = (doc as any).lastAutoTable.finalY;
+    doc.autoTable({
+        startY: secondTableY + 5,
+        head: [['DEDUCCIONES', 'Detalle', 'Monto']],
+        body: deductions,
+        theme: 'striped',
+        headStyles: { fillColor: [220, 53, 69], textColor: 255 },
+    });
+
+    // Totals
+    const thirdTableY = (doc as any).lastAutoTable.finalY;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAGO NETO:', 140, thirdTableY + 15, { align: 'right' });
+    doc.text(`$${netPay.toFixed(2)}`, 200, thirdTableY + 15, { align: 'right' });
+
+    // Summary
+    const summaryY = thirdTableY + 25;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Resumen de Asistencia del Periodo:', 14, summaryY);
+    doc.autoTable({
+        startY: summaryY + 5,
+        body: [
+            ['Turnos con Asistencia', shiftsWorked],
+            ['Retardos Registrados', lateArrivals],
+            ['Faltas Registradas', absences],
+        ],
+        theme: 'grid',
+    });
+
+    doc.save(`recibo_nomina_${employee.name.replace(/ /g, '_')}_${periodText.replace(/ /g, '_')}.pdf`);
   }
   
   const barChartConfig = {
@@ -314,8 +440,8 @@ export default function GuardianPayrollPage() {
                     </Card>
                 ))}
             </div>
-             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
-                <Card className="lg:col-span-3 h-80">
+             <div className="grid gap-6 md:grid-cols-5 mb-6">
+                <Card className="md:col-span-3 h-80">
                     <CardHeader>
                         <Skeleton className="h-6 w-3/4" />
                     </CardHeader>
@@ -323,7 +449,7 @@ export default function GuardianPayrollPage() {
                         <Skeleton className="h-full w-full" />
                     </CardContent>
                 </Card>
-                <Card className="lg:col-span-2 h-80">
+                <Card className="md:col-span-2 h-80">
                      <CardHeader>
                         <Skeleton className="h-6 w-3/4" />
                     </CardHeader>
@@ -398,8 +524,8 @@ export default function GuardianPayrollPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-5 mb-6">
-            <Card className="lg:col-span-3">
+        <div className="grid gap-6 md:grid-cols-5 mb-6">
+            <Card className="md:col-span-3">
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                 </CardHeader>
@@ -422,7 +548,7 @@ export default function GuardianPayrollPage() {
                     </ChartContainer>
                 </CardContent>
             </Card>
-            <Card className="lg:col-span-2">
+            <Card className="md:col-span-2">
                 <CardHeader>
                     <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
                 </CardHeader>
@@ -483,7 +609,7 @@ export default function GuardianPayrollPage() {
                   <SelectItem value="16-end">Días 16 al final</SelectItem>
                 </SelectContent>
               </Select>
-              <Button className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto" disabled>
                 <FileDown className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Exportar PDF</span>
                 <span className="sm:hidden">Exportar</span>
@@ -524,7 +650,7 @@ export default function GuardianPayrollPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
+                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.id)}>
                                         <FileText className="mr-2 h-4 w-4" />
                                         <span>Exportar Nómina Individual</span>
                                     </DropdownMenuItem>
@@ -696,4 +822,3 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
-
