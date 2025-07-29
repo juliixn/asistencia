@@ -71,6 +71,8 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from "recharts";
+import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
@@ -107,6 +109,7 @@ const PIE_CHART_COLORS: Record<string, string> = {
 
 
 export default function GuardianPayrollPage() {
+  const { user, loading } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [attendance, setAttendance] = React.useState<Record<string, AttendanceRecord>>({});
@@ -133,6 +136,7 @@ export default function GuardianPayrollPage() {
   const { toast } = useToast();
 
   const calculateDashboardStats = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
     const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
     const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
     const now = new Date();
@@ -216,9 +220,11 @@ export default function GuardianPayrollPage() {
 
   React.useEffect(() => {
     setIsClient(true);
-    const storedAttendance = localStorage.getItem('attendanceData');
-    if (storedAttendance) {
-      setAttendance(JSON.parse(storedAttendance));
+    if (typeof window !== 'undefined') {
+        const storedAttendance = localStorage.getItem('attendanceData');
+        if (storedAttendance) {
+            setAttendance(JSON.parse(storedAttendance));
+        }
     }
   }, []);
 
@@ -290,9 +296,54 @@ export default function GuardianPayrollPage() {
   }
 
 
-  if (!isClient) {
+  if (loading || !user) {
     return (
-        <div className="flex items-center justify-center h-full">Cargando...</div>
+        <div className="flex flex-col h-screen bg-gray-50/50 p-6">
+            <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10 rounded-lg mb-6">
+                <Skeleton className="h-8 w-1/2" />
+            </header>
+            <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <Skeleton className="h-4 w-1/2" />
+                        </CardHeader>
+                        <CardContent>
+                             <Skeleton className="h-7 w-1/3" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
+                <Card className="lg:col-span-3 h-80">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-full w-full" />
+                    </CardContent>
+                </Card>
+                <Card className="lg:col-span-2 h-80">
+                     <CardHeader>
+                        <Skeleton className="h-6 w-3/4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-full w-full" />
+                    </CardContent>
+                </Card>
+             </div>
+
+            <Card className="shadow-lg border-t-4 border-primary">
+                <CardHeader>
+                     <Skeleton className="h-8 w-1/3" />
+                     <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent>
+                     <Skeleton className="h-64 w-full" />
+                </CardContent>
+            </Card>
+
+        </div>
     );
   }
 
@@ -352,7 +403,7 @@ export default function GuardianPayrollPage() {
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="w-full">
                     <ChartContainer config={barChartConfig} className="h-64 w-full">
                         <BarChart accessibilityLayer data={dashboardStats.barChartData}>
                             <CartesianGrid vertical={false} />
@@ -375,7 +426,7 @@ export default function GuardianPayrollPage() {
                 <CardHeader>
                     <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
                 </CardHeader>
-                <CardContent className="flex justify-center">
+                <CardContent className="w-full flex justify-center">
                      <ChartContainer config={pieChartConfig} className="h-64 w-full">
                       <PieChart>
                         <ChartTooltip
@@ -645,3 +696,4 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
+
