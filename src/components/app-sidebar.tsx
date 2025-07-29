@@ -37,8 +37,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <GuardianIcon className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-headline font-semibold text-primary">
+          <GuardianIcon className="w-8 h-8 text-sidebar-primary" />
+          <h1 className="text-2xl font-headline font-semibold text-sidebar-foreground">
             Guardian
           </h1>
         </div>
