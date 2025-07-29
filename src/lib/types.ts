@@ -1,3 +1,4 @@
+
 export type EmployeeRole = "Guardia" | "Supervisor" | "Coordinador" | "Dirección";
 
 export interface Employee {
@@ -5,6 +6,7 @@ export interface Employee {
   name: string;
   role: EmployeeRole;
   shiftRate: number;
+  email: string;
 }
 
 export interface WorkLocation {

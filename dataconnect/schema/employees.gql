@@ -1,0 +1,31 @@
+
+type Employee @table(key: "employeeId") {
+    employeeId: String! @db(default: "id.uuidV4()")
+    name: String!
+    role: String!
+    shiftRate: Float!
+    email: String! @db(unique: true)
+}
+
+query employeesByEmail(email: String!): [Employee] @auth(level: ADMIN)
+query employeesById(employeeId: String!): Employee @auth(level: ADMIN)
+query listEmployees: [Employee] @auth(level: ADMIN)
+
+mutation createEmployee(
+    name: String!,
+    role: String!,
+    shiftRate: Float!,
+    email: String!
+): Employee! @auth(level: ADMIN)
+
+mutation updateEmployee(
+    employeeId: String!,
+    name: String,
+    role: String,
+    shiftRate: Float,
+    email: String
+): Employee @auth(level: ADMIN)
+
+mutation deleteEmployee(
+    employeeId: String!
+): Employee @auth(level: ADMIN)

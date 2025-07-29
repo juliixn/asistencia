@@ -1,35 +1,33 @@
 
-"""
-Represents a single attendance record for an employee for a specific shift.
-"""
-type AttendanceRecord @table(key: ["employeeId", "date", "shift"]) {
-  "The ID of the employee this record belongs to."
-  employeeId: String!
-  "The date of the attendance record in YYYY-MM-DD format."
-  date: String!
-  "The shift for which the attendance is recorded ('day' or 'night')."
-  shift: String!
-  "The status of the attendance."
-  status: AttendanceStatus!
-  "The ID of the work location, if applicable."
-  locationId: String
-  "URL or Base64 string of photographic evidence, if any."
-  photoEvidence: String
-  "Additional notes for the record."
-  notes: String
+type AttendanceRecord @table(key: "attendanceRecordId") {
+    attendanceRecordId: String! @db(default: "id.uuidV4()")
+    employeeId: String!
+    date: String!
+    shift: String!
+    status: String!
+    locationId: String
+    photoEvidence: String
+    notes: String
+    employee: Employee @foreignKey(field: "employeeId", references: "employeeId")
+    location: WorkLocation @foreignKey(field: "locationId", references: "workLocationId")
 }
 
-"""
-Enum for the possible attendance statuses.
-"""
-enum AttendanceStatus {
-  Asistencia
-  Retardo
-  Falta
-  Descanso
-  Incapacidad
-  Vacaciones
-  Enfermedad
-  Permiso_CS # Con Sueldo
-  Permiso_SS # Sin Sueldo
-}
+query listAttendanceRecords(
+    employeeId: String,
+    startDate: String,
+    endDate: String
+): [AttendanceRecord] @auth(level: ADMIN)
+
+mutation createOrUpdateAttendanceRecord(
+    # We need a unique key for the combination of employee, date, and shift
+    # to decide whether to create a new record or update an existing one.
+    # We will handle this logic in the application code.
+    attendanceRecordId: String, # Provide to update, null to create
+    employeeId: String!,
+    date: String!,
+    shift: String!,
+    status: String!,
+    locationId: String,
+    photoEvidence: String,
+    notes: String
+): AttendanceRecord! @auth(level: ADMIN)

@@ -1,0 +1,35 @@
+
+type LoanRequest @table(key: "loanRequestId") {
+    loanRequestId: String! @db(default: "id.uuidV4()")
+    employeeId: String!
+    requestDate: String!
+    amount: Float!
+    term: String!
+    installments: Int!
+    reason: String!
+    status: String!
+    approvedBy: String
+    approvalDate: String
+    signature: String!
+    employee: Employee @foreignKey(field: "employeeId", references: "employeeId")
+}
+
+query listLoanRequests(employeeId: String): [LoanRequest] @auth(level: ADMIN)
+
+mutation createLoanRequest(
+    employeeId: String!,
+    requestDate: String!,
+    amount: Float!,
+    term: String!,
+    installments: Int!,
+    reason: String!,
+    status: String!,
+    signature: String!
+): LoanRequest! @auth(level: ADMIN)
+
+mutation updateLoanRequest(
+    loanRequestId: String!,
+    status: String,
+    approvedBy: String,
+    approvalDate: String
+): LoanRequest @auth(level: ADMIN)

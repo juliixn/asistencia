@@ -1,0 +1,20 @@
+
+type WorkLocation @table(key: "workLocationId") {
+    workLocationId: String! @db(default: "id.uuidV4()")
+    name: String!
+}
+
+query listWorkLocations: [WorkLocation] @auth(level: ADMIN)
+
+mutation createWorkLocation(
+    name: String!
+): WorkLocation! @auth(level: ADMIN)
+
+mutation updateWorkLocation(
+    workLocationId: String!,
+    name: String
+): WorkLocation @auth(level: ADMIN)
+
+mutation deleteWorkLocation(
+    workLocationId: String!
+): WorkLocation @auth(level: ADMIN)

@@ -6,7 +6,8 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Employee } from '@/lib/types';
-import { initialEmployees } from '@/lib/data';
+import { Employee as EmployeeSchema, listEmployees } from '@firebasegen/default-connector';
+import { getDataConnect } from '@/lib/dataconnect';
 
 
 interface AuthContextType {
@@ -17,16 +18,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({ user: null, employee: null, loading: true });
 
-// Mock mapping from email to employee ID. In a real app, this would come from your database.
-const emailToEmployeeIdMap: Record<string, string> = {
-    'guardia@test.com': '1',
-    'guardia2@test.com': '2',
-    'supervisor@test.com': '3',
-    'coordinador@test.com': '4',
-    'director@test.com': '5',
-}
-
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -35,12 +26,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user && user.email) {
-          const employeeId = emailToEmployeeIdMap[user.email];
-          const foundEmployee = initialEmployees.find(e => e.id === employeeId) || null;
-          setEmployee(foundEmployee);
+        try {
+            const dc = getDataConnect();
+            const {data: employees} = await listEmployees(dc, {
+                email: user.email
+            });
+            const foundEmployee = employees[0] || null;
+            if (foundEmployee) {
+                 setEmployee({
+                    id: foundEmployee.employeeId,
+                    name: foundEmployee.name,
+                    role: foundEmployee.role as Employee['role'],
+                    shiftRate: foundEmployee.shiftRate,
+                 });
+            } else {
+                setEmployee(null);
+            }
+        } catch(e) {
+            console.error("Failed to fetch employee profile", e);
+            setEmployee(null);
+        }
       } else {
           setEmployee(null);
       }
