@@ -44,6 +44,7 @@ import { initialWorkLocations } from '@/lib/data';
 import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 
 export default function ServicesPage() {
@@ -51,6 +52,9 @@ export default function ServicesPage() {
     const [services, setServices] = React.useState<WorkLocation[]>(initialWorkLocations);
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
+    const { employee: currentUser } = useAuth();
+
+    const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
     const handleDelete = (serviceId: string) => {
         const serviceName = services.find(s => s.id === serviceId)?.name;
@@ -94,7 +98,7 @@ export default function ServicesPage() {
             <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!canManageServices}>
                     <PlusCircle className="mr-2" />
                     Añadir Servicio
                 </Button>
@@ -127,7 +131,7 @@ export default function ServicesPage() {
                                         <TableCell className="text-right px-4">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
+                                                    <Button variant="ghost" size="icon" disabled={!canManageServices}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -234,5 +238,3 @@ function ServiceDialog({
     </DialogContent>
   )
 }
-
-    

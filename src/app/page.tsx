@@ -114,7 +114,7 @@ const PIE_CHART_COLORS: Record<string, string> = {
 
 
 export default function GuardianPayrollPage() {
-  const { user, loading } = useAuth();
+  const { user, employee, loading } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [attendance, setAttendance] = React.useState<Record<string, AttendanceRecord>>({});
@@ -421,6 +421,9 @@ export default function GuardianPayrollPage() {
     Otros: { label: "Otros", color: "hsl(var(--chart-5))" },
   }
 
+  const canEditAttendance = employee?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(employee.role);
+  const canExportPayroll = employee?.role && ['Coordinador', 'Dirección'].includes(employee.role);
+
 
   if (loading || !user) {
     return (
@@ -440,8 +443,8 @@ export default function GuardianPayrollPage() {
                     </Card>
                 ))}
             </div>
-             <div className="grid gap-6 md:grid-cols-5 mb-6">
-                <Card className="md:col-span-3 h-80">
+             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5 mb-6">
+                <Card className="lg:col-span-3 h-80">
                     <CardHeader>
                         <Skeleton className="h-6 w-3/4" />
                     </CardHeader>
@@ -449,7 +452,7 @@ export default function GuardianPayrollPage() {
                         <Skeleton className="h-full w-full" />
                     </CardContent>
                 </Card>
-                <Card className="md:col-span-2 h-80">
+                <Card className="lg:col-span-2 h-80">
                      <CardHeader>
                         <Skeleton className="h-6 w-3/4" />
                     </CardHeader>
@@ -524,12 +527,12 @@ export default function GuardianPayrollPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-5 mb-6">
-            <Card className="md:col-span-3">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5 mb-6">
+            <Card className="lg:col-span-3">
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                 </CardHeader>
-                <CardContent className="w-full">
+                <CardContent className="w-full pl-2">
                     <ChartContainer config={barChartConfig} className="h-64 w-full">
                         <BarChart accessibilityLayer data={dashboardStats.barChartData}>
                             <CartesianGrid vertical={false} />
@@ -548,7 +551,7 @@ export default function GuardianPayrollPage() {
                     </ChartContainer>
                 </CardContent>
             </Card>
-            <Card className="md:col-span-2">
+            <Card className="lg:col-span-2">
                 <CardHeader>
                     <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
                 </CardHeader>
@@ -609,11 +612,6 @@ export default function GuardianPayrollPage() {
                   <SelectItem value="16-end">Días 16 al final</SelectItem>
                 </SelectContent>
               </Select>
-              <Button className="w-full sm:w-auto" disabled>
-                <FileDown className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Exportar PDF</span>
-                <span className="sm:hidden">Exportar</span>
-              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0 sm:p-2">
@@ -630,8 +628,8 @@ export default function GuardianPayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {initialEmployees.map((employee) => (
-                    <TableRow key={employee.id} className="hover:bg-primary/5">
+                  {initialEmployees.map((employeeRow) => (
+                    <TableRow key={employeeRow.id} className="hover:bg-primary/5">
                       <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 sm:gap-3">
@@ -639,8 +637,8 @@ export default function GuardianPayrollPage() {
                                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{employee.name}</p>
-                                    <p className="text-xs text-muted-foreground">{employee.role}</p>
+                                    <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{employeeRow.name}</p>
+                                    <p className="text-xs text-muted-foreground">{employeeRow.role}</p>
                                 </div>
                             </div>
                             <DropdownMenu>
@@ -650,7 +648,7 @@ export default function GuardianPayrollPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.id)}>
+                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employeeRow.id)} disabled={!canExportPayroll}>
                                         <FileText className="mr-2 h-4 w-4" />
                                         <span>Exportar Nómina Individual</span>
                                     </DropdownMenuItem>
@@ -659,8 +657,8 @@ export default function GuardianPayrollPage() {
                         </div>
                       </TableCell>
                       {daysInPeriod.map((day) => {
-                        const dayRecord = getRecordForCell(employee.id, day, 'day');
-                        const nightRecord = getRecordForCell(employee.id, day, 'night');
+                        const dayRecord = getRecordForCell(employeeRow.id, day, 'day');
+                        const nightRecord = getRecordForCell(employeeRow.id, day, 'night');
                         const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
                         const isFuture = isAfter(cellDate, new Date());
                         
@@ -668,16 +666,16 @@ export default function GuardianPayrollPage() {
                             <TableCell key={day} className="p-1 text-center border-l transition-colors duration-200 ease-in-out">
                                 <div className="flex flex-col gap-1">
                                     <button 
-                                      onClick={() => !isFuture && handleCellClick(employee, day, 'day')} 
-                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
-                                      disabled={isFuture}
+                                      onClick={() => canEditAttendance && !isFuture && handleCellClick(employeeRow, day, 'day')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
+                                      disabled={isFuture || !canEditAttendance}
                                     >
                                         {dayRecord?.status.charAt(0) || 'D'}
                                     </button>
                                     <button 
-                                      onClick={() => !isFuture && handleCellClick(employee, day, 'night')} 
-                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400 hover:bg-primary/10'} ${isFuture ? 'cursor-not-allowed opacity-50' : ''}`}
-                                      disabled={isFuture}
+                                      onClick={() => canEditAttendance && !isFuture && handleCellClick(employeeRow, day, 'night')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
+                                      disabled={isFuture || !canEditAttendance}
                                     >
                                         {nightRecord?.status.charAt(0) || 'N'}
                                     </button>

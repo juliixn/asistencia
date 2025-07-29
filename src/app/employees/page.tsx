@@ -52,12 +52,16 @@ import { initialEmployees } from '@/lib/data';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 export default function EmployeesPage() {
     const { toast } = useToast();
     const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
+    const { employee: currentUser } = useAuth();
+    
+    const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
         const employeeName = employees.find(e => e.id === employeeId)?.name;
@@ -101,7 +105,7 @@ export default function EmployeesPage() {
                 <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Empleados</h1>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button disabled={!canManageEmployees}>
                         <PlusCircle className="mr-2" />
                         Añadir Empleado
                     </Button>
@@ -140,7 +144,7 @@ export default function EmployeesPage() {
                                     <TableCell className="text-right px-4">
                                         <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
+                                            <Button variant="ghost" size="icon" disabled={!canManageEmployees}>
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>

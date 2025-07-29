@@ -56,6 +56,7 @@ import { initialEmployees } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
 import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/context/AuthContext';
 
 
 // Mock data for loans
@@ -109,6 +110,7 @@ export default function LoansPage() {
   const [loans, setLoans] = React.useState<LoanRequest[]>([]);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
+  const { employee: currentUser } = useAuth();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
@@ -142,7 +144,7 @@ export default function LoansPage() {
 
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
     setLoans(prevLoans => prevLoans.map(loan => {
-      if (loan.id === loanId) {
+      if (loan.id === loanId && currentUser) {
         const employee = initialEmployees.find(e => e.id === loan.employeeId);
         toast({
           title: `Préstamo ${newStatus}`,
@@ -151,7 +153,7 @@ export default function LoansPage() {
         return { 
           ...loan, 
           status: newStatus,
-          approvedBy: '5', // Mock director's ID
+          approvedBy: currentUser.id,
           approvalDate: new Date().toISOString().split('T')[0],
         };
       }
@@ -159,10 +161,8 @@ export default function LoansPage() {
     }));
   };
 
-  // NOTE: This is a placeholder for actual role-based access control
-  const currentUser: Employee = initialEmployees.find(e => e.role === 'Dirección')!;
-  const canCreateRequest = ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
-  const canApproveRequest = currentUser.role === 'Dirección';
+  const canCreateRequest = currentUser?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
+  const canApproveRequest = currentUser?.role === 'Dirección';
 
 
   return (
@@ -442,5 +442,3 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
     </DialogContent>
   )
 }
-
-    

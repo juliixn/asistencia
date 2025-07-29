@@ -21,12 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator, AlertTriangle } from 'lucide-react';
+import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator, AlertTriangle, Lock } from 'lucide-react';
 import { format, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
+import { useAuth } from '@/context/AuthContext';
 
 
 declare module 'jspdf' {
@@ -49,6 +50,7 @@ interface PayrollDetail {
 
 export default function PayrollPage() {
   const { toast } = useToast();
+  const { employee: currentUser } = useAuth();
   const [currentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [payrollData, setPayrollData] = React.useState<PayrollDetail[]>([]);
@@ -61,6 +63,9 @@ export default function PayrollPage() {
     totalPenalties: 0,
     totalBonuses: 0,
   });
+
+  const canAccessPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+
 
   const handleCalculatePayroll = () => {
     setIsCalculating(true);
@@ -204,6 +209,26 @@ export default function PayrollPage() {
         title: 'Exportación Exitosa',
         description: 'El reporte de nómina ha sido generado en PDF.',
     });
+  }
+
+  if (!canAccessPayroll) {
+    return (
+        <div className="flex flex-col h-full bg-gray-50/50 items-center justify-center p-6">
+            <Card className="w-full max-w-md text-center">
+                <CardHeader>
+                    <div className="mx-auto bg-destructive/10 text-destructive p-3 rounded-full mb-4">
+                        <Lock className="w-12 h-12" />
+                    </div>
+                    <CardTitle>Acceso Denegado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>
+                        No tienes los permisos necesarios para acceder a esta sección. Por favor, contacta a un administrador.
+                    </CardDescription>
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
 
   return (
