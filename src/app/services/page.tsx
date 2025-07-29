@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,26 +20,73 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { initialWorkLocations } from '@/lib/data';
+import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 
 export default function ServicesPage() {
     const { toast } = useToast();
+    const [services, setServices] = React.useState<WorkLocation[]>(initialWorkLocations);
+    const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+    const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
 
-    const handleDelete = (serviceName: string) => {
+    const handleDelete = (serviceId: string) => {
+        const serviceName = services.find(s => s.id === serviceId)?.name;
+        setServices(prev => prev.filter(service => service.id !== serviceId));
         toast({
-            title: "Función no implementada",
-            description: `La eliminación de ${serviceName} estará disponible pronto.`
+            title: "Servicio Eliminado",
+            description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
         });
     }
   
-    const handleEdit = (serviceName: string) => {
+    const handleEdit = (service: WorkLocation) => {
+        setEditingService(service);
+    }
+    
+    const handleUpdateService = (updatedService: WorkLocation) => {
+        setServices(prev => prev.map(srv => srv.id === updatedService.id ? updatedService : srv));
         toast({
-            title: "Función no implementada",
-            description: `La edición de ${serviceName} estará disponible pronto.`
+            title: "Servicio Actualizado",
+            description: `Se ha actualizado la información de "${updatedService.name}".`,
         });
+        setEditingService(null);
+    }
+
+    const handleAddService = (newService: Omit<WorkLocation, 'id'>) => {
+        const serviceWithId: WorkLocation = {
+            ...newService,
+            id: `loc${Date.now()}`
+        };
+        setServices(prev => [serviceWithId, ...prev]);
+        toast({
+            title: "Servicio Añadido",
+            description: `Se ha añadido "${newService.name}" a la lista de servicios.`,
+        });
+        setIsAddDialogOpen(false);
     }
 
   return (
@@ -49,10 +97,15 @@ export default function ServicesPage() {
             <header className="p-4 border-b bg-white shadow-sm">
                 <div className="flex items-center justify-between">
                 <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
-                <Button>
-                    <PlusCircle className="mr-2" />
-                    Añadir Servicio
-                </Button>
+                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="mr-2" />
+                        Añadir Servicio
+                    </Button>
+                  </DialogTrigger>
+                  <ServiceDialog onSave={handleAddService} />
+                </Dialog>
                 </div>
             </header>
             <main className="flex-1 p-2 md:p-6 overflow-auto">
@@ -68,12 +121,12 @@ export default function ServicesPage() {
                             <Table>
                                 <TableHeader className="bg-gray-50">
                                 <TableRow>
-                                    <TableHead className="px-4 py-3">Nombre del Servicio</TableHead>
+                                    <TableHead className="px-4 py-3 w-[80%]">Nombre del Servicio</TableHead>
                                     <TableHead className="text-right px-4 py-3">Acciones</TableHead>
                                 </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {initialWorkLocations.map((location) => (
+                                    {services.map((location) => (
                                         <TableRow key={location.id}>
                                             <TableCell className="font-medium px-4">{location.name}</TableCell>
                                             <TableCell className="text-right px-4">
@@ -84,14 +137,32 @@ export default function ServicesPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                         <DropdownMenuItem onClick={() => handleEdit(location.name)}>
+                                                         <DropdownMenuItem onClick={() => handleEdit(location)}>
                                                             <Edit className="mr-2 h-4 w-4"/>
                                                             Editar
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(location.name)}>
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Eliminar
-                                                        </DropdownMenuItem>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Eliminar
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Esta acción no se puede deshacer. Se eliminará permanentemente el servicio.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(location.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                        Confirmar
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
@@ -103,8 +174,72 @@ export default function ServicesPage() {
                     </CardContent>
                 </Card>
             </main>
+             <Dialog open={!!editingService} onOpenChange={(isOpen) => !isOpen && setEditingService(null)}>
+                {editingService && <ServiceDialog
+                    service={editingService}
+                    onSave={(data) => handleUpdateService({ ...editingService, ...data})}
+                    onClose={() => setEditingService(null)}
+                />}
+            </Dialog>
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
+
+function ServiceDialog({
+  onSave,
+  service,
+  onClose,
+}: { 
+  onSave: (data: Omit<WorkLocation, 'id'>) => void;
+  service?: WorkLocation;
+  onClose?: () => void;
+}) {
+  const [name, setName] = React.useState(service?.name || '');
+  const { toast } = useToast();
+
+  const isEditing = !!service;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name) {
+        toast({
+            variant: "destructive",
+            title: "Campo Requerido",
+            description: "Por favor, introduce el nombre del servicio.",
+        });
+        return;
+    }
+    onSave({ name });
+  }
+
+  return (
+    <DialogContent className="w-[95%] sm:max-w-lg rounded-lg">
+        <form onSubmit={handleSubmit}>
+            <DialogHeader>
+                <DialogTitle className="font-headline text-lg sm:text-xl">
+                    {isEditing ? 'Editar Servicio' : 'Añadir Nuevo Servicio'}
+                </DialogTitle>
+            </DialogHeader>
+            <div className="py-4 grid gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Nombre del Servicio</Label>
+                    <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Corporativo Sigma" />
+                </div>
+            </div>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
+                 <DialogClose asChild>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose}>Cancelar</Button>
+                </DialogClose>
+                <Button type="submit" className="w-full sm:w-auto">
+                    {isEditing ? 'Guardar Cambios' : 'Guardar Servicio'}
+                </Button>
+            </DialogFooter>
+        </form>
+    </DialogContent>
+  )
+}
+
+    
