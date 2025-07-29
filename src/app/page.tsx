@@ -21,6 +21,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -55,6 +61,7 @@ import {
   DollarSign,
   UserCheck,
   FileText,
+  MoreVertical,
 } from 'lucide-react';
 import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -165,6 +172,13 @@ export default function GuardianPayrollPage() {
       });
     }, 2000);
   };
+  
+  const handleExportIndividualPDF = (employeeName: string) => {
+    toast({
+        title: 'Exportando PDF',
+        description: `Generando la nómina para ${employeeName}.`
+    });
+  }
 
   return (
     <SidebarProvider>
@@ -227,7 +241,7 @@ export default function GuardianPayrollPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div className="flex flex-col">
                   <CardTitle className="font-headline text-xl">
-                    {format(currentDate, 'MMMM yyyy', { locale: es })}
+                    {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
                   </CardTitle>
                   <CardDescription>
                     Selecciona un empleado y día para registrar la asistencia.
@@ -270,7 +284,7 @@ export default function GuardianPayrollPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[250px] font-semibold">Empleado</TableHead>
+                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[300px] font-semibold">Empleado</TableHead>
                         {daysInPeriod.map((day) => (
                           <TableHead key={day} className="text-center w-28 font-semibold">
                             {day}
@@ -282,14 +296,29 @@ export default function GuardianPayrollPage() {
                       {initialEmployees.map((employee) => (
                         <TableRow key={employee.id} className="hover:bg-primary/5">
                           <TableCell className="sticky left-0 bg-white z-10 font-medium">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-primary/10 text-primary rounded-full p-2.5">
-                                    <User className="w-5 h-5" />
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-primary/10 text-primary rounded-full p-2.5">
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-gray-800">{employee.name}</p>
+                                        <p className="text-xs text-muted-foreground">{employee.role}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-semibold text-gray-800">{employee.name}</p>
-                                    <p className="text-xs text-muted-foreground">{employee.role}</p>
-                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            <span>Exportar Nómina Individual</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                           </TableCell>
                           {daysInPeriod.map((day) => {
@@ -458,3 +487,5 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
+
+    
