@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +23,16 @@ import {
 import { GuardianIcon } from "@/components/icons";
 
 export function AppSidebar() {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/employees", label: "Empleados", icon: Users },
+    { href: "/services", label: "Servicios", icon: Building },
+    { href: "/payroll", label: "Nómina", icon: FileText },
+    { href: "/loans", label: "Préstamos", icon: Landmark },
+  ];
+  
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
@@ -33,36 +45,18 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Dashboard" isActive>
-              <LayoutDashboard />
-              <span>Dashboard</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Empleados">
-              <Users />
-              <span>Empleados</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Servicios">
-              <Building />
-              <span>Servicios</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Nómina">
-              <FileText />
-              <span>Nómina</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Préstamos">
-              <Landmark />
-              <span>Préstamos</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {menuItems.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <Link href={item.href} passHref legacyBehavior>
+                <SidebarMenuButton asChild tooltip={item.label} isActive={pathname === item.href}>
+                  <a>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
         </SidebarMenu>
       </SidebarContent>
        <SidebarFooter>
@@ -84,5 +78,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

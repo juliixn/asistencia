@@ -46,3 +46,20 @@ export interface PayrollBonus {
   amount: number;
   description: string;
 }
+
+export type LoanStatus = "Pendiente" | "Aprobado" | "Rechazado" | "Pagado";
+export type LoanTerm = "única" | "quincenal";
+
+export interface LoanRequest {
+  id: string;
+  employeeId: string;
+  requestDate: string; // YYYY-MM-DD
+  amount: number;
+  term: LoanTerm;
+  installments: number; // 1 for 'única', 2 or more for 'quincenal'
+  reason: string;
+  status: LoanStatus;
+  approvedBy?: string; // director's id
+  approvalDate?: string;
+  signature: string; // data-url of signature
+}
