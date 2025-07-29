@@ -35,7 +35,6 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -44,7 +43,6 @@ import { useToast } from '@/hooks/use-toast';
 import { initialEmployees, initialWorkLocations } from '@/lib/data';
 import type {
   Employee,
-  WorkLocation,
   AttendanceRecord,
   AttendanceStatus,
   PayrollPeriod,
@@ -55,7 +53,6 @@ import {
   ChevronRight,
   Upload,
   User,
-  X,
   FileDown,
   RefreshCw,
   TrendingUp,
@@ -63,9 +60,20 @@ import {
   UserCheck,
   FileText,
   MoreVertical,
+  Activity,
+  AlertTriangle,
 } from 'lucide-react';
 import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from "recharts";
+
 
 const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
   'Asistencia',
@@ -90,6 +98,60 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
   'Permiso C/S': 'bg-cyan-200 text-cyan-800 border border-cyan-300',
   'Permiso S/S': 'bg-gray-200 text-gray-800 border border-gray-300',
 };
+
+const chartData = [
+  { month: "Enero", desktop: 186, mobile: 80 },
+  { month: "Febrero", desktop: 305, mobile: 200 },
+  { month: "Marzo", desktop: 237, mobile: 120 },
+  { month: "Abril", desktop: 73, mobile: 190 },
+  { month: "Mayo", desktop: 209, mobile: 130 },
+  { month: "Junio", desktop: 214, mobile: 140 },
+]
+
+const chartConfig = {
+  desktop: {
+    label: "Asistencias",
+    color: "hsl(var(--chart-1))",
+  },
+  mobile: {
+    label: "Faltas",
+    color: "hsl(var(--chart-2))",
+  },
+}
+
+const pieChartData = [
+  { browser: "asistencias", visitors: 275, fill: "var(--color-chrome)" },
+  { browser: "faltas", visitors: 50, fill: "var(--color-safari)" },
+  { browser: "retardos", visitors: 75, fill: "var(--color-firefox)" },
+  { browser: "descansos", visitors: 150, fill: "var(--color-edge)" },
+  { browser: "otros", visitors: 25, fill: "var(--color-other)" },
+]
+
+const pieChartConfig = {
+  visitors: {
+    label: "Turnos",
+  },
+  chrome: {
+    label: "Asistencias",
+    color: "hsl(var(--chart-1))",
+  },
+  safari: {
+    label: "Faltas",
+    color: "hsl(var(--chart-2))",
+  },
+  firefox: {
+    label: "Retardos",
+    color: "hsl(var(--chart-3))",
+  },
+  edge: {
+    label: "Descansos",
+    color: "hsl(var(--chart-4))",
+  },
+  other: {
+    label: "Otros",
+    color: "hsl(var(--chart-5))",
+  },
+}
 
 export default function GuardianPayrollPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -188,7 +250,7 @@ export default function GuardianPayrollPage() {
         <div className="flex flex-col h-full bg-gray-50/50">
           <header className="p-4 border-b bg-white shadow-sm">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Registro de Asistencia</h1>
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Dashboard de Asistencia</h1>
               <Button onClick={handleSync} disabled={isSyncing}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
@@ -197,7 +259,7 @@ export default function GuardianPayrollPage() {
             </div>
           </header>
           <main className="flex-1 p-2 md:p-6 overflow-auto">
-            <div className="grid gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Asistencia Total (Turnos)</CardTitle>
@@ -220,12 +282,12 @@ export default function GuardianPayrollPage() {
               </Card>
                <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Horas Extra</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Faltas y Retardos</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+120</div>
-                  <p className="text-xs text-muted-foreground">Turnos dobles y tiempo extra</p>
+                  <div className="text-2xl font-bold">22</div>
+                  <p className="text-xs text-muted-foreground">-1.8% desde el mes pasado</p>
                 </CardContent>
               </Card>
               <Card>
@@ -239,11 +301,68 @@ export default function GuardianPayrollPage() {
                 </CardContent>
               </Card>
             </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-6">
+                <Card className="lg:col-span-3">
+                    <CardHeader>
+                        <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ChartContainer config={chartConfig} className="h-64 w-full">
+                            <BarChart accessibilityLayer data={chartData}>
+                                <CartesianGrid vertical={false} />
+                                <XAxis
+                                dataKey="month"
+                                tickLine={false}
+                                tickMargin={10}
+                                axisLine={false}
+                                tickFormatter={(value) => value.slice(0, 3)}
+                                />
+                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <ChartLegend content={<ChartLegendContent />} />
+                                <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
+                                <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
+                            </BarChart>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+                <Card className="lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex justify-center">
+                         <ChartContainer config={pieChartConfig} className="h-64 w-full max-w-xs">
+                          <PieChart>
+                            <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent hideLabel />}
+                            />
+                             <Pie
+                              data={pieChartData}
+                              dataKey="visitors"
+                              nameKey="browser"
+                              innerRadius={60}
+                              strokeWidth={5}
+                            >
+                               {pieChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <ChartLegend
+                              content={<ChartLegendContent nameKey="browser" />}
+                              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                            />
+                          </PieChart>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+            </div>
+            
             <Card className="shadow-lg border-t-4 border-primary">
               <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex flex-col">
                   <CardTitle className="font-headline text-lg md:text-xl">
-                    {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
+                    Registro de Asistencia: {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
                   </CardTitle>
                   <CardDescription className="text-sm">
                     Selecciona un empleado y día para registrar la asistencia.
@@ -268,23 +387,14 @@ export default function GuardianPayrollPage() {
                       <SelectItem value="16-end">Días 16 al final</SelectItem>
                     </SelectContent>
                   </Select>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                         <Button className="w-full sm:w-auto">
-                          <FileDown className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Exportar PDF</span>
-                          <span className="sm:hidden">Exportar</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Podrá exportar en PDF al presionar el botón a la fecha que se tiene sin importar que no esté completo el periodo quincenal</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Button className="w-full sm:w-auto">
+                    <FileDown className="mr-2 h-4 w-4" />
+                    <span className="hidden sm:inline">Exportar PDF</span>
+                    <span className="sm:hidden">Exportar</span>
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-2 sm:p-6">
+              <CardContent className="p-0 sm:p-2">
                 <div className="overflow-x-auto rounded-lg border">
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="bg-gray-50">
