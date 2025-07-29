@@ -28,6 +28,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -249,10 +250,19 @@ export default function GuardianPayrollPage() {
                       <SelectItem value="16-end">Días 16 al final</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Exportar Nómina
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button>
+                          <FileDown className="mr-2 h-4 w-4" />
+                          Exportar PDF
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Exporta la nómina actual a PDF, sin importar si el periodo está completo.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </CardHeader>
               <CardContent>
@@ -448,5 +458,3 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
-
-    
