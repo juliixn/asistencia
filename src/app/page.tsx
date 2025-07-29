@@ -176,7 +176,7 @@ export default function GuardianPayrollPage() {
   
   const handleExportIndividualPDF = (employeeName: string) => {
     toast({
-        title: 'Exportando PDF',
+        title: 'Exportando PDF Individual',
         description: `Generando la nómina para ${employeeName}.`
     });
   }
@@ -278,7 +278,7 @@ export default function GuardianPayrollPage() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Exporta la nómina actual a PDF, sin importar si el periodo está completo.</p>
+                        <p>Podrá exportar en PDF al presionar el botón a la fecha que se tiene sin importar que no esté completo el periodo quincenal</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -300,7 +300,7 @@ export default function GuardianPayrollPage() {
                     <TableBody>
                       {initialEmployees.map((employee) => (
                         <TableRow key={employee.id} className="hover:bg-primary/5">
-                          <TableCell className="sticky left-0 bg-white z-10 font-medium px-2 py-3 sm:px-4">
+                          <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
                             <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 sm:gap-3">
                                     <div className="bg-primary/10 text-primary rounded-full p-2">
@@ -320,7 +320,7 @@ export default function GuardianPayrollPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
                                             <FileText className="mr-2 h-4 w-4" />
-                                            <span>Exportar Nómina</span>
+                                            <span>Exportar Nómina Individual</span>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -421,7 +421,7 @@ function UpdateAttendanceDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="w-[95%] sm:max-w-md rounded-lg">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="font-headline text-lg sm:text-xl">
@@ -431,7 +431,7 @@ function UpdateAttendanceDialog({
               Día {cell.day}, Turno de {cell.shift === 'day' ? 'Día (08-20h)' : 'Noche (20-08h)'}
             </div>
           </DialogHeader>
-          <div className="py-4 grid gap-4">
+          <div className="py-4 grid gap-4 max-h-[70vh] overflow-y-auto pr-2">
             <div className="space-y-2">
               <Label>Estado</Label>
               <RadioGroup value={status} onValueChange={(v) => setStatus(v as AttendanceStatus)} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -477,7 +477,7 @@ function UpdateAttendanceDialog({
                 <Textarea id="notes" placeholder="Anotar detalles como turnos dobles, adelantos, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
              </div>
           </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
             <DialogClose asChild>
               <Button type="button" variant="outline" className="w-full sm:w-auto">
                 Cancelar

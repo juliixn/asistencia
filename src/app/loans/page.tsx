@@ -184,12 +184,12 @@ export default function LoansPage() {
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="px-2 sm:px-4">Empleado</TableHead>
-                        <TableHead className="px-2 sm:px-4 hidden sm:table-cell">Fecha Solicitud</TableHead>
-                        <TableHead className="px-2 sm:px-4">Monto</TableHead>
-                        <TableHead className="px-2 sm:px-4 hidden md:table-cell">Plazo</TableHead>
-                        <TableHead className="px-2 sm:px-4">Estado</TableHead>
-                        <TableHead className="text-right px-2 sm:px-4">Acciones</TableHead>
+                        <TableHead className="px-2 sm:px-4 py-3">Empleado</TableHead>
+                        <TableHead className="px-2 sm:px-4 py-3 hidden sm:table-cell">Fecha Solicitud</TableHead>
+                        <TableHead className="px-2 sm:px-4 py-3">Monto</TableHead>
+                        <TableHead className="px-2 sm:px-4 py-3 hidden md:table-cell">Plazo</TableHead>
+                        <TableHead className="px-2 sm:px-4 py-3">Estado</TableHead>
+                        <TableHead className="text-right px-2 py-3 sm:px-4">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
