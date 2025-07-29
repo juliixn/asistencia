@@ -184,12 +184,12 @@ export default function LoansPage() {
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead>Empleado</TableHead>
-                        <TableHead>Fecha Solicitud</TableHead>
-                        <TableHead>Monto</TableHead>
-                        <TableHead>Plazo</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
+                        <TableHead className="px-2 sm:px-4">Empleado</TableHead>
+                        <TableHead className="px-2 sm:px-4 hidden sm:table-cell">Fecha Solicitud</TableHead>
+                        <TableHead className="px-2 sm:px-4">Monto</TableHead>
+                        <TableHead className="px-2 sm:px-4 hidden md:table-cell">Plazo</TableHead>
+                        <TableHead className="px-2 sm:px-4">Estado</TableHead>
+                        <TableHead className="text-right px-2 sm:px-4">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -200,17 +200,17 @@ export default function LoansPage() {
 
                             return (
                                 <TableRow key={loan.id}>
-                                    <TableCell className="font-medium">{employee?.name || 'Desconocido'}</TableCell>
-                                    <TableCell>{loan.requestDate}</TableCell>
-                                    <TableCell>${loan.amount.toFixed(2)}</TableCell>
-                                    <TableCell>{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="font-medium px-2 sm:px-4">{employee?.name || 'Desconocido'}</TableCell>
+                                    <TableCell className="hidden sm:table-cell px-2 sm:px-4">{loan.requestDate}</TableCell>
+                                    <TableCell className="px-2 sm:px-4">${loan.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="hidden md:table-cell px-2 sm:px-4">{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
+                                    <TableCell className="px-2 sm:px-4">
                                         <Badge variant="outline" className={`gap-1.5 whitespace-nowrap ${statusConfig[loan.status].className}`}>
                                             <StatusIcon className="h-3.5 w-3.5" />
                                             {statusConfig[loan.status].label}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right px-2 sm:px-4">
                                        <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                               <Button variant="ghost" size="icon">
@@ -260,7 +260,7 @@ export default function LoansPage() {
                                                         <AlertDialogDescription>
                                                           Esta acción rechazará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
                                                         </AlertDialogDescription>
-                                                      </Header>
+                                                      </AlertDialogHeader>
                                                       <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                         <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Rechazado')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
@@ -352,10 +352,10 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
   const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="w-[95%] sm:max-w-lg rounded-lg">
         <form onSubmit={handleSubmit}>
             <DialogHeader>
-                <DialogTitle className="font-headline">Nueva Solicitud de Préstamo</DialogTitle>
+                <DialogTitle className="font-headline text-lg sm:text-xl">Nueva Solicitud de Préstamo</DialogTitle>
             </DialogHeader>
             <div className="py-4 grid gap-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
@@ -383,7 +383,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                         setTerm(newTerm);
                         if (newTerm === 'unica') setInstallments(1);
                         else if (installments < 2) setInstallments(2);
-                    }} className="flex gap-4">
+                    }} className="flex flex-col sm:flex-row gap-4">
                         <div className="flex items-center space-x-2">
                             <RadioGroupItem value="unica" id="unica" />
                             <Label htmlFor="unica" className="font-normal">Una sola exhibición</Label>
@@ -412,7 +412,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                         Limpiar
                       </Button>
                     </div>
-                    <div className="w-full rounded-md border border-input aspect-video">
+                    <div className="w-full rounded-md border border-input aspect-video bg-white">
                       <SignatureCanvas
                         ref={signatureRef}
                         penColor='black'

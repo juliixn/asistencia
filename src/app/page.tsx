@@ -242,14 +242,14 @@ export default function GuardianPayrollPage() {
             <Card className="shadow-lg border-t-4 border-primary">
               <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex flex-col">
-                  <CardTitle className="font-headline text-xl">
+                  <CardTitle className="font-headline text-lg md:text-xl">
                     {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm">
                     Selecciona un empleado y día para registrar la asistencia.
                   </CardDescription>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
                       <ChevronLeft className="h-4 w-4" />
@@ -273,7 +273,8 @@ export default function GuardianPayrollPage() {
                       <TooltipTrigger asChild>
                          <Button className="w-full sm:w-auto">
                           <FileDown className="mr-2 h-4 w-4" />
-                          Exportar PDF
+                          <span className="hidden sm:inline">Exportar PDF</span>
+                          <span className="sm:hidden">Exportar</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -283,14 +284,14 @@ export default function GuardianPayrollPage() {
                   </TooltipProvider>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 sm:p-6">
                 <div className="overflow-x-auto rounded-lg border">
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[250px] md:w-[300px] font-semibold">Empleado</TableHead>
+                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[200px] md:w-[250px] font-semibold px-2 py-3 sm:px-4">Empleado</TableHead>
                         {daysInPeriod.map((day) => (
-                          <TableHead key={day} className="text-center w-24 md:w-28 font-semibold">
+                          <TableHead key={day} className="text-center w-20 md:w-24 font-semibold px-1 py-3">
                             {day}
                           </TableHead>
                         ))}
@@ -299,14 +300,14 @@ export default function GuardianPayrollPage() {
                     <TableBody>
                       {initialEmployees.map((employee) => (
                         <TableRow key={employee.id} className="hover:bg-primary/5">
-                          <TableCell className="sticky left-0 bg-white z-10 font-medium">
+                          <TableCell className="sticky left-0 bg-white z-10 font-medium px-2 py-3 sm:px-4">
                             <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-primary/10 text-primary rounded-full p-2.5">
-                                        <User className="w-5 h-5" />
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="bg-primary/10 text-primary rounded-full p-2">
+                                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-gray-800 text-sm">{employee.name}</p>
+                                        <p className="font-semibold text-gray-800 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{employee.name}</p>
                                         <p className="text-xs text-muted-foreground">{employee.role}</p>
                                     </div>
                                 </div>
@@ -319,7 +320,7 @@ export default function GuardianPayrollPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleExportIndividualPDF(employee.name)}>
                                             <FileText className="mr-2 h-4 w-4" />
-                                            <span>Exportar Nómina Individual</span>
+                                            <span>Exportar Nómina</span>
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -423,7 +424,7 @@ function UpdateAttendanceDialog({
       <DialogContent className="sm:max-w-[480px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="font-headline">
+            <DialogTitle className="font-headline text-lg sm:text-xl">
               Actualizar Asistencia - {cell.employee.name}
             </DialogTitle>
             <div className="text-sm text-muted-foreground">
@@ -464,7 +465,7 @@ function UpdateAttendanceDialog({
             {status === 'Retardo' && (
               <div className="space-y-2">
                 <Label htmlFor="photo">Evidencia Fotográfica (Retardo)</Label>
-                <label className="flex w-full items-center gap-2 cursor-pointer rounded-md border border-dashed p-4 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+                <label className="flex w-full items-center gap-2 cursor-pointer rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                     <Upload className="h-5 w-5" />
                     <span className="truncate">{photo ? photo.name : "Subir imagen de WhatsApp"}</span>
                     <Input id="photo" type="file" accept="image/*" className="sr-only" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
