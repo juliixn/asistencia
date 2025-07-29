@@ -2,6 +2,8 @@
 'use client';
 
 import * as React from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +27,13 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { initialEmployees } from '@/lib/data';
 import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
+
+
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 interface PayrollDetail {
     employeeId: string;
@@ -132,6 +141,68 @@ export default function PayrollPage() {
     }, 1500);
   }
 
+  const handleExportGeneralPDF = () => {
+    if (payrollData.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No hay datos para exportar',
+        description: 'Por favor, calcula la nómina antes de exportar.',
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+    const periodText = `Periodo: ${period === '1-15' ? '1-15' : `16-${getDaysInMonth(currentDate)}`} de ${format(currentDate, 'MMMM yyyy', { locale: es })}`;
+    
+    doc.text('Reporte General de Nómina', 14, 16);
+    doc.setFontSize(12);
+    doc.text(periodText, 14, 22);
+
+    const tableColumn = ["Empleado", "Turnos", "Sueldo Bruto", "Deducciones", "Bonos", "Pago Neto"];
+    const tableRows: (string | number)[][] = [];
+
+    payrollData.forEach(item => {
+      const payrollItemData = [
+        item.employeeName,
+        item.shiftsWorked,
+        `$${item.basePay.toFixed(2)}`,
+        `-$${item.loanDeductions.toFixed(2)}`,
+        `+$${item.bonuses.toFixed(2)}`,
+        `$${item.netPay.toFixed(2)}`,
+      ];
+      tableRows.push(payrollItemData);
+    });
+    
+    tableRows.push([
+        { content: 'TOTALES', colSpan: 4, styles: { fontStyle: 'bold' } },
+        { content: `-$${summary.totalDeductions.toFixed(2)}`, styles: { fontStyle: 'bold' } },
+        { content: `$${summary.totalNetPay.toFixed(2)}`, styles: { fontStyle: 'bold' } },
+    ]);
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      theme: 'grid',
+       headStyles: {
+        fillColor: [22, 163, 74] 
+      },
+      foot: [
+          [{ content: `Total a Pagar: $${summary.totalNetPay.toFixed(2)}`, colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fontSize: 12 } }]
+      ],
+      footStyles: {
+          fillColor: [244, 244, 245]
+      }
+    });
+
+    doc.save(`nomina_general_${format(currentDate, 'yyyy-MM-dd')}.pdf`);
+    
+    toast({
+        title: 'Exportación Exitosa',
+        description: 'El reporte de nómina ha sido generado en PDF.',
+    });
+  }
+
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
         <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
@@ -142,7 +213,7 @@ export default function PayrollPage() {
                     <CheckCircle className="mr-2" />
                     Cerrar Periodo de Nómina
                 </Button>
-                <Button variant="outline" disabled>
+                <Button variant="outline" onClick={handleExportGeneralPDF} disabled={payrollData.length === 0}>
                     <FileDown className="mr-2" />
                     Exportar Reporte General
                 </Button>
@@ -269,3 +340,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
