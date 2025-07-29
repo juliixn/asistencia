@@ -156,13 +156,14 @@ export default function LoansPage() {
         <div className="flex flex-col h-full bg-gray-50/50">
           <header className="p-4 border-b bg-white shadow-sm">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-headline font-bold text-gray-800">Gestión de Préstamos</h1>
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Préstamos</h1>
               {canCreateRequest && (
                 <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
                       <PlusCircle className="mr-2" />
-                      Nueva Solicitud
+                      <span className="hidden md:inline">Nueva Solicitud</span>
+                      <span className="md:hidden">Añadir</span>
                     </Button>
                   </DialogTrigger>
                   <RequestLoanDialog onSave={handleCreateRequest} />
@@ -170,7 +171,7 @@ export default function LoansPage() {
               )}
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <main className="flex-1 p-2 md:p-6 overflow-auto">
             <Card className="shadow-lg border-t-4 border-primary">
               <CardHeader>
                 <CardTitle>Solicitudes de Préstamos y Adelantos</CardTitle>
@@ -204,7 +205,7 @@ export default function LoansPage() {
                                     <TableCell>${loan.amount.toFixed(2)}</TableCell>
                                     <TableCell>{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className={`gap-1.5 ${statusConfig[loan.status].className}`}>
+                                        <Badge variant="outline" className={`gap-1.5 whitespace-nowrap ${statusConfig[loan.status].className}`}>
                                             <StatusIcon className="h-3.5 w-3.5" />
                                             {statusConfig[loan.status].label}
                                         </Badge>
@@ -259,7 +260,7 @@ export default function LoansPage() {
                                                         <AlertDialogDescription>
                                                           Esta acción rechazará el préstamo de ${loan.amount.toFixed(2)} para {employee?.name}. Esta acción no se puede deshacer.
                                                         </AlertDialogDescription>
-                                                      </AlertDialogHeader>
+                                                      </Header>
                                                       <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                         <AlertDialogAction onClick={() => handleUpdateLoanStatus(loan.id, 'Rechazado')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
@@ -351,12 +352,12 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
   const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
 
   return (
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit}>
             <DialogHeader>
                 <DialogTitle className="font-headline">Nueva Solicitud de Préstamo</DialogTitle>
             </DialogHeader>
-            <div className="py-4 grid gap-4">
+            <div className="py-4 grid gap-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
                     <Label htmlFor="employee">Empleado</Label>
                     <Select value={employeeId} onValueChange={setEmployeeId}>
@@ -372,7 +373,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="amount">Monto a Solicitar</Label>
-                    <Input id="amount" type="number" value={amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} max={maxLoanAmount} />
+                    <Input id="amount" type="number" value={amount === 0 ? '' : amount} onChange={e => setAmount(parseFloat(e.target.value) || 0)} max={maxLoanAmount} placeholder="0.00" />
                     {selectedEmployee && <p className="text-xs text-muted-foreground">Máximo permitido para este empleado: ${maxLoanAmount.toFixed(2)}</p>}
                  </div>
                  <div className="space-y-2">
@@ -383,13 +384,13 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                         if (newTerm === 'unica') setInstallments(1);
                         else if (installments < 2) setInstallments(2);
                     }} className="flex gap-4">
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
                             <RadioGroupItem value="unica" id="unica" />
-                            <Label htmlFor="unica" className="ml-2">Una sola exhibición</Label>
+                            <Label htmlFor="unica" className="font-normal">Una sola exhibición</Label>
                         </div>
-                         <div className="flex items-center">
+                         <div className="flex items-center space-x-2">
                             <RadioGroupItem value="quincenal" id="quincenal" />
-                            <Label htmlFor="quincenal" className="ml-2">Pagos Quincenales</Label>
+                            <Label htmlFor="quincenal" className="font-normal">Pagos Quincenales</Label>
                         </div>
                     </RadioGroup>
                  </div>
@@ -411,20 +412,20 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
                         Limpiar
                       </Button>
                     </div>
-                    <div className="w-full rounded-md border border-input">
+                    <div className="w-full rounded-md border border-input aspect-video">
                       <SignatureCanvas
                         ref={signatureRef}
                         penColor='black'
-                        canvasProps={{ className: 'w-full h-[150px] rounded-md' }}
+                        canvasProps={{ className: 'w-full h-full rounded-md' }}
                       />
                     </div>
                  </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
                 <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancelar</Button>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit">Enviar Solicitud</Button>
+                <Button type="submit" className="w-full sm:w-auto">Enviar Solicitud</Button>
             </DialogFooter>
         </form>
     </DialogContent>

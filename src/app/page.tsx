@@ -188,15 +188,16 @@ export default function GuardianPayrollPage() {
         <div className="flex flex-col h-full bg-gray-50/50">
           <header className="p-4 border-b bg-white shadow-sm">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-headline font-bold text-gray-800">Registro de Asistencia</h1>
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Registro de Asistencia</h1>
               <Button onClick={handleSync} disabled={isSyncing}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+                <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
+                 <span className="md:hidden">Sinc.</span>
               </Button>
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
-            <div className="grid gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
+          <main className="flex-1 p-2 md:p-6 overflow-auto">
+            <div className="grid gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Asistencia Total (Turnos)</CardTitle>
@@ -239,7 +240,7 @@ export default function GuardianPayrollPage() {
               </Card>
             </div>
             <Card className="shadow-lg border-t-4 border-primary">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex flex-col">
                   <CardTitle className="font-headline text-xl">
                     {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
@@ -248,15 +249,17 @@ export default function GuardianPayrollPage() {
                     Selecciona un empleado y día para registrar la asistencia.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <Select value={period} onValueChange={handlePeriodChange}>
-                    <SelectTrigger className="w-[180px] bg-white">
+                    <SelectTrigger className="w-full sm:w-[180px] bg-white">
                       <CalendarDays className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Seleccionar periodo" />
                     </SelectTrigger>
@@ -268,7 +271,7 @@ export default function GuardianPayrollPage() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                         <Button>
+                         <Button className="w-full sm:w-auto">
                           <FileDown className="mr-2 h-4 w-4" />
                           Exportar PDF
                         </Button>
@@ -285,9 +288,9 @@ export default function GuardianPayrollPage() {
                   <Table className="min-w-full whitespace-nowrap">
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[300px] font-semibold">Empleado</TableHead>
+                        <TableHead className="sticky left-0 bg-gray-50 z-10 w-[250px] md:w-[300px] font-semibold">Empleado</TableHead>
                         {daysInPeriod.map((day) => (
-                          <TableHead key={day} className="text-center w-28 font-semibold">
+                          <TableHead key={day} className="text-center w-24 md:w-28 font-semibold">
                             {day}
                           </TableHead>
                         ))}
@@ -297,19 +300,19 @@ export default function GuardianPayrollPage() {
                       {initialEmployees.map((employee) => (
                         <TableRow key={employee.id} className="hover:bg-primary/5">
                           <TableCell className="sticky left-0 bg-white z-10 font-medium">
-                            <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-3">
                                     <div className="bg-primary/10 text-primary rounded-full p-2.5">
                                         <User className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-gray-800">{employee.name}</p>
+                                        <p className="font-semibold text-gray-800 text-sm">{employee.name}</p>
                                         <p className="text-xs text-muted-foreground">{employee.role}</p>
                                     </div>
                                 </div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                                             <MoreVertical className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -430,11 +433,11 @@ function UpdateAttendanceDialog({
           <div className="py-4 grid gap-4">
             <div className="space-y-2">
               <Label>Estado</Label>
-              <RadioGroup value={status} onValueChange={(v) => setStatus(v as AttendanceStatus)} className="grid grid-cols-3 gap-2">
+              <RadioGroup value={status} onValueChange={(v) => setStatus(v as AttendanceStatus)} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ATTENDANCE_STATUS_OPTIONS.map((opt) => (
                   <div key={opt}>
                     <RadioGroupItem value={opt} id={opt} className="sr-only" />
-                    <Label htmlFor={opt} className={`flex items-center justify-center p-2 rounded-md border-2 cursor-pointer transition-all duration-200 ${status === opt ? 'border-primary ring-2 ring-primary/50' : 'border-gray-200'} ${STATUS_COLORS[opt]}`}>
+                    <Label htmlFor={opt} className={`flex items-center text-xs sm:text-sm justify-center p-2 rounded-md border-2 cursor-pointer transition-all duration-200 ${status === opt ? 'border-primary ring-2 ring-primary/50' : 'border-gray-200'} ${STATUS_COLORS[opt]}`}>
                       {opt}
                     </Label>
                   </div>
@@ -463,7 +466,7 @@ function UpdateAttendanceDialog({
                 <Label htmlFor="photo">Evidencia Fotográfica (Retardo)</Label>
                 <label className="flex w-full items-center gap-2 cursor-pointer rounded-md border border-dashed p-4 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                     <Upload className="h-5 w-5" />
-                    <span>{photo ? photo.name : "Subir imagen de WhatsApp"}</span>
+                    <span className="truncate">{photo ? photo.name : "Subir imagen de WhatsApp"}</span>
                     <Input id="photo" type="file" accept="image/*" className="sr-only" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
                 </label>
               </div>
@@ -473,13 +476,13 @@ function UpdateAttendanceDialog({
                 <Textarea id="notes" placeholder="Anotar detalles como turnos dobles, adelantos, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
              </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" className="w-full sm:w-auto">
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={!status || (needsLocation && !locationId)}>
+            <Button type="submit" disabled={!status || (needsLocation && !locationId)} className="w-full sm:w-auto">
               Guardar Cambios
             </Button>
           </DialogFooter>
