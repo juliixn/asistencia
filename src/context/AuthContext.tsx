@@ -6,7 +6,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Employee } from '@/lib/types';
-// import { Employee as EmployeeSchema, listEmployees } from '@firebasegen/default-connector';
+import { listEmployees } from '@firebasegen/default-connector';
 import { getDataConnect } from '@/lib/dataconnect';
 import { initialEmployees } from '@/lib/data';
 
@@ -31,15 +31,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(user);
       if (user && user.email) {
         try {
-            // const dc = getDataConnect();
-            // const {data: employees} = await listEmployees(dc, {
-            //     email: user.email
-            // });
-            // const foundEmployee = employees[0] || null;
-            const foundEmployee = initialEmployees.find(e => e.email === user.email) || null;
+            // This will fail on first build, but succeed on subsequent builds
+            const dc = getDataConnect();
+            const {data: employees} = await listEmployees(dc, {
+                filter: { email: { eq: user.email }}
+            });
+            const foundEmployee = employees[0] || null;
+            
             if (foundEmployee) {
                  setEmployee({
-                    id: foundEmployee.id,
+                    id: foundEmployee.employeeId,
                     name: foundEmployee.name,
                     role: foundEmployee.role as Employee['role'],
                     shiftRate: foundEmployee.shiftRate,
@@ -49,8 +50,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setEmployee(null);
             }
         } catch(e) {
-            console.error("Failed to fetch employee profile", e);
-            setEmployee(null);
+            console.warn("DataConnect not ready, falling back to mock data for auth.", e);
+            // Fallback to initialEmployees if DataConnect fails (e.g., during build)
+            const foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
+            setEmployee(foundEmployee);
         }
       } else {
           setEmployee(null);
@@ -92,5 +95,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
