@@ -29,6 +29,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -48,10 +59,12 @@ export default function EmployeesPage() {
     const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
-    const handleDelete = (employeeName: string) => {
+    const handleDelete = (employeeId: string) => {
+        const employeeName = employees.find(e => e.id === employeeId)?.name;
+        setEmployees(prev => prev.filter(employee => employee.id !== employeeId));
         toast({
-            title: "Función no implementada",
-            description: `La eliminación de ${employeeName} estará disponible pronto.`
+            title: "Empleado Eliminado",
+            description: `Se ha eliminado a ${employeeName} de la lista de personal.`
         });
     }
   
@@ -105,9 +118,9 @@ export default function EmployeesPage() {
                     <CardContent>
                         <div className="overflow-x-auto rounded-lg border">
                         <Table>
-                            <TableHeader className="bg-gray-50">
+                            <TableHeader className="bg-gray-50/50">
                             <TableRow>
-                                <TableHead className="px-4 py-3">Nombre</TableHead>
+                                <TableHead className="px-4 py-3 w-[40%]">Nombre</TableHead>
                                 <TableHead className="px-4 py-3">Rol</TableHead>
                                 <TableHead className="px-4 py-3 hidden sm:table-cell">Tarifa por Turno</TableHead>
                                 <TableHead className="text-right px-4 py-3">Acciones</TableHead>
@@ -133,10 +146,29 @@ export default function EmployeesPage() {
                                                     <Edit className="mr-2 h-4 w-4"/>
                                                     Editar
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(employee.name)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Eliminar
-                                                </DropdownMenuItem>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Eliminar
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta acción no se puede deshacer. Se eliminará permanentemente al empleado
+                                                                de la lista.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(employee.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                                Confirmar
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
