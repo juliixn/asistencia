@@ -6,8 +6,9 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Employee } from '@/lib/types';
-import { Employee as EmployeeSchema, listEmployees } from '@firebasegen/default-connector';
+// import { Employee as EmployeeSchema, listEmployees } from '@firebasegen/default-connector';
 import { getDataConnect } from '@/lib/dataconnect';
+import { initialEmployees } from '@/lib/data';
 
 
 interface AuthContextType {
@@ -30,17 +31,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(user);
       if (user && user.email) {
         try {
-            const dc = getDataConnect();
-            const {data: employees} = await listEmployees(dc, {
-                email: user.email
-            });
-            const foundEmployee = employees[0] || null;
+            // const dc = getDataConnect();
+            // const {data: employees} = await listEmployees(dc, {
+            //     email: user.email
+            // });
+            // const foundEmployee = employees[0] || null;
+            const foundEmployee = initialEmployees.find(e => e.email === user.email) || null;
             if (foundEmployee) {
                  setEmployee({
-                    id: foundEmployee.employeeId,
+                    id: foundEmployee.id,
                     name: foundEmployee.name,
                     role: foundEmployee.role as Employee['role'],
                     shiftRate: foundEmployee.shiftRate,
+                    email: foundEmployee.email,
                  });
             } else {
                 setEmployee(null);
@@ -89,3 +92,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

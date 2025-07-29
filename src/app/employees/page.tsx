@@ -53,12 +53,13 @@ import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { getDataConnect } from '@/lib/dataconnect';
-import { createEmployee, updateEmployee, deleteEmployee, listEmployees } from '@firebasegen/default-connector';
+// import { createEmployee, updateEmployee, deleteEmployee, listEmployees } from '@firebasegen/default-connector';
+import { initialEmployees } from '@/lib/data';
 
 export default function EmployeesPage() {
     const { toast } = useToast();
-    const [employees, setEmployees] = React.useState<Employee[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
+    const [isLoading, setIsLoading] = React.useState(false);
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     const { employee: currentUser } = useAuth();
@@ -66,43 +67,43 @@ export default function EmployeesPage() {
     const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
     const fetchEmployees = React.useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const dc = getDataConnect();
-            const { data } = await listEmployees(dc, {});
-            const mappedData: Employee[] = data.map(e => ({
-                id: e.employeeId,
-                name: e.name,
-                role: e.role as EmployeeRole,
-                shiftRate: e.shiftRate,
-                email: e.email,
-            }));
-            setEmployees(mappedData);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar la lista de empleados.' });
-        } finally {
-            setIsLoading(false);
-        }
+        // setIsLoading(true);
+        // try {
+        //     const dc = getDataConnect();
+        //     const { data } = await listEmployees(dc, {});
+        //     const mappedData: Employee[] = data.map(e => ({
+        //         id: e.employeeId,
+        //         name: e.name,
+        //         role: e.role as EmployeeRole,
+        //         shiftRate: e.shiftRate,
+        //         email: e.email,
+        //     }));
+        //     setEmployees(mappedData);
+        // } catch (error) {
+        //     toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar la lista de empleados.' });
+        // } finally {
+        //     setIsLoading(false);
+        // }
     }, [toast]);
 
     React.useEffect(() => {
-        fetchEmployees();
+        // fetchEmployees();
     }, [fetchEmployees]);
 
 
     const handleDelete = async (employeeId: string) => {
         const employeeName = employees.find(e => e.id === employeeId)?.name;
-        try {
-            const dc = getDataConnect();
-            await deleteEmployee(dc, { employeeId });
-            await fetchEmployees(); // Refresh list
-            toast({
-                title: "Empleado Eliminado",
-                description: `Se ha eliminado a ${employeeName} de la lista de personal.`
-            });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al empleado.' });
-        }
+        // try {
+        //     const dc = getDataConnect();
+        //     await deleteEmployee(dc, { employeeId });
+        //     await fetchEmployees(); // Refresh list
+        //     toast({
+        //         title: "Empleado Eliminado",
+        //         description: `Se ha eliminado a ${employeeName} de la lista de personal.`
+        //     });
+        // } catch (error) {
+        //     toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al empleado.' });
+        // }
     }
   
     const handleEdit = (employee: Employee) => {
@@ -110,45 +111,45 @@ export default function EmployeesPage() {
     }
     
     const handleUpdateEmployee = async (employee: Employee) => {
-        try {
-            const dc = getDataConnect();
-            await updateEmployee(dc, {
-                employeeId: employee.id,
-                name: employee.name,
-                role: employee.role,
-                shiftRate: employee.shiftRate,
-                email: employee.email,
-            });
-            await fetchEmployees();
-            toast({
-                title: "Empleado Actualizado",
-                description: `Se ha actualizado la información de ${employee.name}.`,
-            });
-            setEditingEmployee(null);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar al empleado.' });
-        }
+        // try {
+        //     const dc = getDataConnect();
+        //     await updateEmployee(dc, {
+        //         employeeId: employee.id,
+        //         name: employee.name,
+        //         role: employee.role,
+        //         shiftRate: employee.shiftRate,
+        //         email: employee.email,
+        //     });
+        //     await fetchEmployees();
+        //     toast({
+        //         title: "Empleado Actualizado",
+        //         description: `Se ha actualizado la información de ${employee.name}.`,
+        //     });
+        //     setEditingEmployee(null);
+        // } catch (error) {
+        //     toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar al empleado.' });
+        // }
     }
 
     const handleAddEmployee = async (newEmployee: Omit<Employee, 'id'>) => {
-        try {
-            const dc = getDataConnect();
-            await createEmployee(dc, {
-                // employeeId is auto-generated by the database
-                name: newEmployee.name,
-                role: newEmployee.role,
-                shiftRate: newEmployee.shiftRate,
-                email: newEmployee.email,
-            });
-            await fetchEmployees();
-            toast({
-                title: "Empleado Añadido",
-                description: `Se ha añadido a ${newEmployee.name} a la lista de personal.`,
-            });
-            setIsAddDialogOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo añadir al empleado.' });
-        }
+        // try {
+        //     const dc = getDataConnect();
+        //     await createEmployee(dc, {
+        //         // employeeId is auto-generated by the database
+        //         name: newEmployee.name,
+        //         role: newEmployee.role,
+        //         shiftRate: newEmployee.shiftRate,
+        //         email: newEmployee.email,
+        //     });
+        //     await fetchEmployees();
+        //     toast({
+        //         title: "Empleado Añadido",
+        //         description: `Se ha añadido a ${newEmployee.name} a la lista de personal.`,
+        //     });
+        //     setIsAddDialogOpen(false);
+        // } catch (error) {
+        //     toast({ variant: 'destructive', title: 'Error', description: 'No se pudo añadir al empleado.' });
+        // }
     }
   
     return (
@@ -338,3 +339,5 @@ function EmployeeDialog({
     </DialogContent>
   )
 }
+
+    
