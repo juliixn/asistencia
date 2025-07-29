@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -107,9 +108,26 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 
 export default function LoansPage() {
-  const [loans, setLoans] = React.useState<LoanRequest[]>(initialLoans);
+  const [loans, setLoans] = React.useState<LoanRequest[]>([]);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+    const storedLoans = localStorage.getItem('loanData');
+    if (storedLoans) {
+      setLoans(JSON.parse(storedLoans));
+    } else {
+      setLoans(initialLoans);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isClient) {
+      localStorage.setItem('loanData', JSON.stringify(loans));
+    }
+  }, [loans, isClient]);
 
   const handleCreateRequest = (newRequest: Omit<LoanRequest, 'id'>) => {
     const requestWithId: LoanRequest = {
@@ -166,7 +184,7 @@ export default function LoansPage() {
                       <span className="md:hidden">Añadir</span>
                     </Button>
                   </DialogTrigger>
-                  <RequestLoanDialog onSave={handleCreateRequest} />
+                  <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)}/>
                 </Dialog>
               )}
             </div>
@@ -182,14 +200,14 @@ export default function LoansPage() {
               <CardContent>
                  <div className="overflow-x-auto rounded-lg border">
                   <Table>
-                    <TableHeader className="bg-gray-50">
+                    <TableHeader className="bg-gray-50/50">
                       <TableRow>
-                        <TableHead className="px-2 sm:px-4 py-3">Empleado</TableHead>
-                        <TableHead className="px-2 sm:px-4 py-3 hidden sm:table-cell">Fecha Solicitud</TableHead>
-                        <TableHead className="px-2 sm:px-4 py-3">Monto</TableHead>
-                        <TableHead className="px-2 sm:px-4 py-3 hidden md:table-cell">Plazo</TableHead>
-                        <TableHead className="px-2 sm:px-4 py-3">Estado</TableHead>
-                        <TableHead className="text-right px-2 py-3 sm:px-4">Acciones</TableHead>
+                        <TableHead className="px-4 py-3">Empleado</TableHead>
+                        <TableHead className="px-4 py-3 hidden sm:table-cell">Fecha Solicitud</TableHead>
+                        <TableHead className="px-4 py-3">Monto</TableHead>
+                        <TableHead className="px-4 py-3 hidden md:table-cell">Plazo</TableHead>
+                        <TableHead className="px-4 py-3">Estado</TableHead>
+                        <TableHead className="text-right px-4 py-3">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -200,17 +218,17 @@ export default function LoansPage() {
 
                             return (
                                 <TableRow key={loan.id}>
-                                    <TableCell className="font-medium px-2 sm:px-4">{employee?.name || 'Desconocido'}</TableCell>
-                                    <TableCell className="hidden sm:table-cell px-2 sm:px-4">{loan.requestDate}</TableCell>
-                                    <TableCell className="px-2 sm:px-4">${loan.amount.toFixed(2)}</TableCell>
-                                    <TableCell className="hidden md:table-cell px-2 sm:px-4">{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
-                                    <TableCell className="px-2 sm:px-4">
+                                    <TableCell className="font-medium px-4">{employee?.name || 'Desconocido'}</TableCell>
+                                    <TableCell className="hidden sm:table-cell px-4">{loan.requestDate}</TableCell>
+                                    <TableCell className="px-4">${loan.amount.toFixed(2)}</TableCell>
+                                    <TableCell className="hidden md:table-cell px-4">{loan.installments} {loan.term === 'única' ? 'pago' : 'pagos'}</TableCell>
+                                    <TableCell className="px-4">
                                         <Badge variant="outline" className={`gap-1.5 whitespace-nowrap ${statusConfig[loan.status].className}`}>
                                             <StatusIcon className="h-3.5 w-3.5" />
                                             {statusConfig[loan.status].label}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right px-2 sm:px-4">
+                                    <TableCell className="text-right px-4">
                                        <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                               <Button variant="ghost" size="icon">
@@ -227,8 +245,8 @@ export default function LoansPage() {
                                                   <DropdownMenuSeparator />
                                                   <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <ThumbsUp className="mr-2 h-4 w-4 text-green-500" />
+                                                      <DropdownMenuItem className="text-green-600 focus:text-green-700" onSelect={(e) => e.preventDefault()}>
+                                                        <ThumbsUp className="mr-2 h-4 w-4" />
                                                         Aprobar
                                                       </DropdownMenuItem>
                                                     </AlertDialogTrigger>
@@ -249,8 +267,8 @@ export default function LoansPage() {
                                                   </AlertDialog>
                                                   <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <ThumbsDown className="mr-2 h-4 w-4 text-red-500" />
+                                                      <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                        <ThumbsDown className="mr-2 h-4 w-4" />
                                                         Rechazar
                                                       </DropdownMenuItem>
                                                     </AlertDialogTrigger>
@@ -290,7 +308,7 @@ export default function LoansPage() {
 }
 
 
-function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>) => void}) {
+function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanRequest, 'id'>) => void; onClose: () => void; }) {
   const [employeeId, setEmployeeId] = React.useState<string>('');
   const [amount, setAmount] = React.useState<number>(0);
   const [term, setTerm] = React.useState<'unica' | 'quincenal'>('unica');
@@ -423,7 +441,7 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
                 <DialogClose asChild>
-                    <Button type="button" variant="outline" className="w-full sm:w-auto">Cancelar</Button>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose}>Cancelar</Button>
                 </DialogClose>
                 <Button type="submit" className="w-full sm:w-auto">Enviar Solicitud</Button>
             </DialogFooter>
@@ -431,3 +449,5 @@ function RequestLoanDialog({ onSave }: { onSave: (data: Omit<LoanRequest, 'id'>)
     </DialogContent>
   )
 }
+
+    
