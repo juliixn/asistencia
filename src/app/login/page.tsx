@@ -38,10 +38,19 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
+      let description = 'Las credenciales no son correctas. Inténtalo de nuevo.';
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+        description = 'El correo electrónico proporcionado no se encuentra registrado.';
+      } else if (error.code === 'auth/wrong-password') {
+        description = 'La contraseña es incorrecta. Por favor, inténtalo de nuevo.';
+      } else if (error.code === 'auth/invalid-credential') {
+        description = 'Las credenciales proporcionadas no son válidas. Revisa el correo y la contraseña.';
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Error de Autenticación',
-        description: 'Las credenciales no son correctas. Inténtalo de nuevo.',
+        description: description,
       });
     } finally {
       setIsLoading(false);
@@ -96,4 +105,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
