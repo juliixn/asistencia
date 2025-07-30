@@ -553,7 +553,7 @@ export default function GuardianPayrollPage() {
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                 </CardHeader>
-                <CardContent className="w-full">
+                <CardContent className="w-full px-0">
                     <ChartContainer config={barChartConfig} className="h-64 w-full">
                         <BarChart accessibilityLayer data={dashboardStats.barChartData}>
                             <CartesianGrid vertical={false} />
