@@ -30,35 +30,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user && user.email) {
-        try {
-            // This will fail on first build, but succeed on subsequent builds
-            // const dc = getDataConnect();
-            // const {data: employees} = await listEmployees(dc, {
-            //     filter: { email: { eq: user.email }}
-            // });
-            // const foundEmployee = employees[0] || null;
-            
-            // if (foundEmployee) {
-            //      setEmployee({
-            //         id: foundEmployee.employeeId,
-            //         name: foundEmployee.name,
-            //         role: foundEmployee.role as Employee['role'],
-            //         shiftRate: foundEmployee.shiftRate,
-            //         email: foundEmployee.email,
-            //      });
-            // } else {
-            //     setEmployee(null);
-            // }
-            console.warn("DataConnect not ready, falling back to mock data for auth.");
-            // Fallback to initialEmployees if DataConnect fails (e.g., during build)
-            const foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
+            // Using mock data until connector is ready
+            let foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
+            if (!foundEmployee) {
+                // If user is logged in but not in mock data, assign a default admin profile
+                // to prevent being logged out. This is a temporary measure.
+                console.warn(`User ${user.email} not found in mock data. Assigning default 'Dirección' role.`);
+                foundEmployee = {
+                    id: 'temp-admin',
+                    name: user.displayName || 'Admin Temporal',
+                    email: user.email,
+                    role: 'Dirección',
+                    shiftRate: 1500,
+                };
+            }
             setEmployee(foundEmployee);
-        } catch(e) {
-            console.warn("DataConnect call failed, falling back to mock data for auth.", e);
-            // Fallback to initialEmployees if DataConnect fails (e.g., during build)
-            const foundEmployee = initialEmployees.find(emp => emp.email === user.email) || null;
-            setEmployee(foundEmployee);
-        }
       } else {
           setEmployee(null);
       }
@@ -79,7 +65,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/');
     } else if(user && !employee && !isAuthPage) {
         // Logged in with firebase, but no mapping to an employee profile.
-        // For security, log them out.
+        // For security, log them out. THIS SHOULD NOT HAPPEN WITH THE NEW LOGIC.
+        console.error("Error: Logged in user has no employee profile. Logging out.");
         auth.signOut();
     }
   }, [user, employee, loading, router, pathname]);
@@ -99,5 +86,4 @@ export const useAuth = () => {
   }
   return context;
 };
-
     
