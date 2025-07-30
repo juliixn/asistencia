@@ -548,31 +548,6 @@ export default function GuardianPayrollPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-1 mb-6">
-            <Card className="lg:col-span-5">
-                <CardHeader>
-                    <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
-                </CardHeader>
-                <CardContent className="w-full px-0">
-                    <ChartContainer config={barChartConfig} className="h-64 w-full">
-                        <BarChart accessibilityLayer data={dashboardStats.barChartData}>
-                            <CartesianGrid vertical={false} />
-                            <XAxis
-                            dataKey="month"
-                            tickLine={false}
-                            tickMargin={10}
-                            axisLine={false}
-                            tickFormatter={(value) => value.slice(0, 3)}
-                            />
-                            <ChartTooltip content={<ChartTooltipContent />} />
-                            <ChartLegend content={<ChartLegendContent />} />
-                            <Bar dataKey="Asistencias" fill="var(--color-Asistencias)" radius={4} />
-                            <Bar dataKey="Faltas" fill="var(--color-Faltas)" radius={4} />
-                        </BarChart>
-                    </ChartContainer>
-                </CardContent>
-            </Card>
-        </div>
         
         <Card className="shadow-lg border-t-4 border-primary">
           <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
