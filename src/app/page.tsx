@@ -548,8 +548,8 @@ export default function GuardianPayrollPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5 mb-6">
-            <Card className="lg:col-span-3">
+        <div className="grid gap-6 md:grid-cols-1 mb-6">
+            <Card className="lg:col-span-5">
                 <CardHeader>
                     <CardTitle>Rendimiento de Asistencia (Últimos 6 meses)</CardTitle>
                 </CardHeader>
@@ -569,36 +569,6 @@ export default function GuardianPayrollPage() {
                             <Bar dataKey="Asistencias" fill="var(--color-Asistencias)" radius={4} />
                             <Bar dataKey="Faltas" fill="var(--color-Faltas)" radius={4} />
                         </BarChart>
-                    </ChartContainer>
-                </CardContent>
-            </Card>
-            <Card className="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Desglose de Asistencia (Periodo Actual)</CardTitle>
-                </CardHeader>
-                <CardContent className="w-full flex justify-center">
-                     <ChartContainer config={pieChartConfig} className="h-64 w-full">
-                      <PieChart>
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent hideLabel />}
-                        />
-                         <Pie
-                          data={dashboardStats.pieChartData}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={60}
-                          strokeWidth={5}
-                        >
-                           {dashboardStats.pieChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <ChartLegend
-                          content={<ChartLegendContent nameKey="name" />}
-                          className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-                        />
-                      </PieChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
