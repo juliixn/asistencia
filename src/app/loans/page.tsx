@@ -52,52 +52,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { initialEmployees } from '@/lib/data';
+import { initialEmployees, initialLoans } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
 import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
-
-
-// Mock data for loans
-const initialLoans: LoanRequest[] = [
-  {
-    id: 'loan1',
-    employeeId: '1',
-    requestDate: '2024-07-15',
-    amount: 1000,
-    term: 'quincenal',
-    installments: 2,
-    reason: 'Emergencia familiar',
-    status: 'Aprobado',
-    approvedBy: '5',
-    approvalDate: '2024-07-16',
-    signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA... '
-  },
-  {
-    id: 'loan2',
-    employeeId: '2',
-    requestDate: '2024-07-20',
-    amount: 500,
-    term: 'única',
-    installments: 1,
-    reason: 'Adelanto de nómina',
-    status: 'Pendiente',
-    signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA... '
-  },
-  {
-    id: 'loan3',
-    employeeId: '3',
-    requestDate: '2024-07-21',
-    amount: 2500,
-    term: 'quincenal',
-    installments: 4,
-    reason: 'Compra de vehículo',
-    status: 'Rechazado',
-    signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA... '
-  },
-];
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {
   Pendiente: { label: 'Pendiente', icon: Clock, className: 'bg-yellow-100 text-yellow-800' },
@@ -109,6 +69,7 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 export default function LoansPage() {
   const [loans, setLoans] = React.useState<LoanRequest[]>([]);
+  const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
   const { employee: currentUser } = useAuth();
@@ -116,11 +77,23 @@ export default function LoansPage() {
 
   React.useEffect(() => {
     setIsClient(true);
-    const storedLoans = localStorage.getItem('loanData');
-    if (storedLoans) {
-      setLoans(JSON.parse(storedLoans));
-    } else {
-      setLoans(initialLoans);
+    if (typeof window !== 'undefined') {
+        const storedLoans = localStorage.getItem('loanData');
+        const storedEmployees = localStorage.getItem('employeeData');
+
+        if (storedLoans) {
+            setLoans(JSON.parse(storedLoans));
+        } else {
+            setLoans(initialLoans);
+            localStorage.setItem('loanData', JSON.stringify(initialLoans));
+        }
+
+        if (storedEmployees) {
+            setEmployees(JSON.parse(storedEmployees));
+        } else {
+            setEmployees(initialEmployees);
+            localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
+        }
     }
   }, []);
 
@@ -138,7 +111,7 @@ export default function LoansPage() {
     setLoans(prev => [requestWithId, ...prev]);
     toast({
         title: "Solicitud Creada",
-        description: `La solicitud de préstamo para ${initialEmployees.find(e => e.id === newRequest.employeeId)?.name} ha sido creada.`,
+        description: `La solicitud de préstamo para ${employees.find(e => e.id === newRequest.employeeId)?.name} ha sido creada.`,
     })
     setIsRequestDialogOpen(false);
   }
@@ -146,7 +119,7 @@ export default function LoansPage() {
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
     setLoans(prevLoans => prevLoans.map(loan => {
       if (loan.id === loanId && currentUser) {
-        const employee = initialEmployees.find(e => e.id === loan.employeeId);
+        const employee = employees.find(e => e.id === loan.employeeId);
         toast({
           title: `Préstamo ${newStatus}`,
           description: `La solicitud de ${employee?.name} ha sido actualizada.`,
@@ -180,7 +153,7 @@ export default function LoansPage() {
                   <span className="md:hidden">Añadir</span>
                 </Button>
               </DialogTrigger>
-              <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)}/>
+              <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)} employees={employees} />
             </Dialog>
           )}
         </div>
@@ -208,7 +181,7 @@ export default function LoansPage() {
                 </TableHeader>
                 <TableBody>
                     {loans.map(loan => {
-                        const employee = initialEmployees.find(e => e.id === loan.employeeId);
+                        const employee = employees.find(e => e.id === loan.employeeId);
                         const StatusIcon = statusConfig[loan.status].icon;
                         const isPending = loan.status === 'Pendiente';
 
@@ -302,7 +275,7 @@ export default function LoansPage() {
 }
 
 
-function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanRequest, 'id'>) => void; onClose: () => void; }) {
+function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit<LoanRequest, 'id'>) => void; onClose: () => void; employees: Employee[] }) {
   const [employeeId, setEmployeeId] = React.useState<string>('');
   const [amount, setAmount] = React.useState<number>(0);
   const [term, setTerm] = React.useState<'unica' | 'quincenal'>('unica');
@@ -321,7 +294,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
     e.preventDefault();
     setIsProcessing(true);
     
-    const selectedEmployee = initialEmployees.find(e => e.id === employeeId);
+    const selectedEmployee = employees.find(e => e.id === employeeId);
     const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
 
     if (!employeeId || amount <= 0 || !reason) {
@@ -395,7 +368,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
     }
   }
 
-  const selectedEmployee = initialEmployees.find(e => e.id === employeeId);
+  const selectedEmployee = employees.find(e => e.id === employeeId);
   const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
 
   return (
@@ -412,7 +385,7 @@ function RequestLoanDialog({ onSave, onClose }: { onSave: (data: Omit<LoanReques
                             <SelectValue placeholder="Seleccionar empleado" />
                         </SelectTrigger>
                         <SelectContent>
-                            {initialEmployees.map((emp) => (
+                            {employees.map((emp) => (
                                 <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
                             ))}
                         </SelectContent>

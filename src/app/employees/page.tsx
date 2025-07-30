@@ -52,8 +52,6 @@ import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-// import { getDataConnect } from '@/lib/dataconnect';
-// import { createEmployee, updateEmployee, deleteEmployee, listEmployees } from '@firebasegen/default-connector';
 import { initialEmployees } from '@/lib/data';
 
 export default function EmployeesPage() {
@@ -65,94 +63,67 @@ export default function EmployeesPage() {
     const { employee: currentUser } = useAuth();
     
     const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+    const [isClient, setIsClient] = React.useState(false);
 
-    const fetchEmployees = React.useCallback(async () => {
+    const fetchEmployees = React.useCallback(() => {
         setIsLoading(true);
-        try {
-            // const dc = getDataConnect();
-            // const { data } = await listEmployees(dc, {});
-            // const mappedData: Employee[] = data.map(e => ({
-            //     id: e.employeeId,
-            //     name: e.name,
-            //     role: e.role as EmployeeRole,
-            //     shiftRate: e.shiftRate,
-            //     email: e.email,
-            // }));
-            // Using mock data until connector is ready
-            setEmployees(initialEmployees);
-        } catch (error) {
-            console.error(error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar la lista de empleados.' });
-            setEmployees(initialEmployees); // Fallback to mock data on error
-        } finally {
-            setIsLoading(false);
+        if (typeof window !== 'undefined') {
+            const storedEmployees = localStorage.getItem('employeeData');
+            if (storedEmployees) {
+                setEmployees(JSON.parse(storedEmployees));
+            } else {
+                setEmployees(initialEmployees);
+                localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
+            }
         }
-    }, [toast]);
+        setIsLoading(false);
+    }, []);
 
     React.useEffect(() => {
+        setIsClient(true);
         fetchEmployees();
     }, [fetchEmployees]);
 
-
-    const handleDelete = async (employeeId: string) => {
-        const employeeName = employees.find(e => e.id === employeeId)?.name;
-        try {
-            // const dc = getDataConnect();
-            // await deleteEmployee(dc, { employeeId });
-            await fetchEmployees(); // Refresh list
-            toast({
-                title: "Empleado Eliminado (Simulación)",
-                description: `Se ha eliminado a ${employeeName} de la lista de personal.`
-            });
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar al empleado.' });
+    React.useEffect(() => {
+        if (isClient) {
+            localStorage.setItem('employeeData', JSON.stringify(employees));
         }
+    }, [employees, isClient]);
+
+
+    const handleDelete = (employeeId: string) => {
+        const employeeName = employees.find(e => e.id === employeeId)?.name;
+        setEmployees(prev => prev.filter(e => e.id !== employeeId));
+        toast({
+            title: "Empleado Eliminado",
+            description: `Se ha eliminado a ${employeeName} de la lista de personal.`
+        });
     }
   
     const handleEdit = (employee: Employee) => {
         setEditingEmployee(employee);
     }
     
-    const handleUpdateEmployee = async (employee: Employee) => {
-        try {
-            // const dc = getDataConnect();
-            // await updateEmployee(dc, {
-            //     employeeId: employee.id,
-            //     name: employee.name,
-            //     role: employee.role,
-            //     shiftRate: employee.shiftRate,
-            //     email: employee.email,
-            // });
-            await fetchEmployees();
-            toast({
-                title: "Empleado Actualizado (Simulación)",
-                description: `Se ha actualizado la información de ${employee.name}.`,
-            });
-            setEditingEmployee(null);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar al empleado.' });
-        }
+    const handleUpdateEmployee = (employee: Employee) => {
+        setEmployees(prev => prev.map(e => e.id === employee.id ? employee : e));
+        toast({
+            title: "Empleado Actualizado",
+            description: `Se ha actualizado la información de ${employee.name}.`,
+        });
+        setEditingEmployee(null);
     }
 
-    const handleAddEmployee = async (newEmployee: Omit<Employee, 'id'>) => {
-        try {
-            // const dc = getDataConnect();
-            // await createEmployee(dc, {
-            //     // employeeId is auto-generated by the database
-            //     name: newEmployee.name,
-            //     role: newEmployee.role,
-            //     shiftRate: newEmployee.shiftRate,
-            //     email: newEmployee.email,
-            // });
-            await fetchEmployees();
-            toast({
-                title: "Empleado Añadido (Simulación)",
-                description: `Se ha añadido a ${newEmployee.name} a la lista de personal.`,
-            });
-            setIsAddDialogOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo añadir al empleado.' });
-        }
+    const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
+        const newEmployee: Employee = {
+            ...newEmployeeData,
+            id: `emp-${Date.now()}`,
+        };
+        setEmployees(prev => [...prev, newEmployee]);
+        toast({
+            title: "Empleado Añadido",
+            description: `Se ha añadido a ${newEmployee.name} a la lista de personal.`,
+        });
+        setIsAddDialogOpen(false);
     }
   
     return (
@@ -167,7 +138,7 @@ export default function EmployeesPage() {
                         Añadir Empleado
                     </Button>
                   </DialogTrigger>
-                  <EmployeeDialog onSave={handleAddEmployee} />
+                  <EmployeeDialog onSave={handleAddEmployee} onClose={() => setIsAddDialogOpen(false)} />
                 </Dialog>
                 </div>
             </header>
@@ -342,5 +313,3 @@ function EmployeeDialog({
     </DialogContent>
   )
 }
-
-    

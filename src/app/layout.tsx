@@ -1,12 +1,10 @@
 
 'use client';
 
-import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNavbar } from '@/components/bottom-navbar';
 import { AuthProvider } from '@/context/AuthContext';
-import { useAuth } from '@/context/AuthContext';
 import React from 'react';
 
 // This can't be in the same file as the 'use client' component that uses it.
@@ -16,20 +14,16 @@ import React from 'react';
 // };
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const showNavbar = !loading && user;
-
   return (
     <>
-      <div className={showNavbar ? "pb-20" : ""}>
+      <div className="pb-20">
         {children}
       </div>
-      {showNavbar && <BottomNavbar />}
+      <BottomNavbar />
       <Toaster />
     </>
   );
 }
-
 
 export default function RootLayout({
   children,

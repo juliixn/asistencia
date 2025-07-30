@@ -78,6 +78,7 @@ export default function PayrollPage() {
     setTimeout(() => {
         const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
         const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
+        const employeeData: Employee[] = JSON.parse(localStorage.getItem('employeeData') || '[]');
 
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -86,7 +87,7 @@ export default function PayrollPage() {
         const startDay = period === '1-15' ? 1 : 16;
         const endDay = period === '1-15' ? 15 : daysInMonth;
 
-        const calculatedPayroll = initialEmployees.map(employee => {
+        const calculatedPayroll = employeeData.map(employee => {
             let shiftsWorked = 0;
             let lateArrivals = 0;
             

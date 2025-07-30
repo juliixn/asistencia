@@ -47,6 +47,7 @@ import type {
   AttendanceStatus,
   PayrollPeriod,
   LoanRequest,
+  WorkLocation,
 } from '@/lib/types';
 import {
   CalendarDays,
@@ -119,6 +120,9 @@ export default function GuardianPayrollPage() {
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [attendance, setAttendance] = React.useState<Record<string, AttendanceRecord>>({});
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [employees, setEmployees] = React.useState<Employee[]>([]);
+  const [workLocations, setWorkLocations] = React.useState<WorkLocation[]>([]);
+
   const [selectedCell, setSelectedCell] = React.useState<{
     employee: Employee;
     day: number;
@@ -141,8 +145,10 @@ export default function GuardianPayrollPage() {
 
   const calculateDashboardStats = React.useCallback(() => {
     if (typeof window === 'undefined') return;
+
     const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
     const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
+    const employeeData: Employee[] = JSON.parse(localStorage.getItem('employeeData') || '[]');
     const now = new Date();
     
     // --- Cards Stats ---
@@ -157,7 +163,7 @@ export default function GuardianPayrollPage() {
     const estimatedPayroll = currentMonthRecords
         .filter(r => r.status === 'Asistencia')
         .reduce((acc, r) => {
-            const employee = initialEmployees.find(e => e.id === r.employeeId);
+            const employee = employeeData.find(e => e.id === r.employeeId);
             return acc + (employee?.shiftRate || 0);
         }, 0);
     
@@ -226,8 +232,23 @@ export default function GuardianPayrollPage() {
     setIsClient(true);
     if (typeof window !== 'undefined') {
         const storedAttendance = localStorage.getItem('attendanceData');
-        if (storedAttendance) {
-            setAttendance(JSON.parse(storedAttendance));
+        const storedEmployees = localStorage.getItem('employeeData');
+        const storedServices = localStorage.getItem('serviceData');
+
+        if (storedAttendance) setAttendance(JSON.parse(storedAttendance));
+        
+        if (storedEmployees) {
+            setEmployees(JSON.parse(storedEmployees));
+        } else {
+            setEmployees(initialEmployees);
+            localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
+        }
+
+        if (storedServices) {
+            setWorkLocations(JSON.parse(storedServices));
+        } else {
+            setWorkLocations(initialWorkLocations);
+            localStorage.setItem('serviceData', JSON.stringify(initialWorkLocations));
         }
     }
   }, []);
@@ -279,7 +300,7 @@ export default function GuardianPayrollPage() {
   }
   
   const handleExportIndividualPDF = (employeeId: string) => {
-    const employee = initialEmployees.find(e => e.id === employeeId);
+    const employee = employees.find(e => e.id === employeeId);
     if (!employee) return;
 
     toast({
@@ -425,7 +446,7 @@ export default function GuardianPayrollPage() {
   const canExportPayroll = employee?.role && ['Coordinador', 'Dirección'].includes(employee.role);
 
 
-  if (loading || !user) {
+  if (loading) {
     return (
         <div className="flex flex-col h-screen bg-gray-50/50 p-6">
             <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10 rounded-lg mb-6">
@@ -628,7 +649,7 @@ export default function GuardianPayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {initialEmployees.map((employeeRow) => (
+                  {employees.map((employeeRow) => (
                     <TableRow key={employeeRow.id} className="hover:bg-primary/5">
                       <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
                         <div className="flex items-center justify-between gap-2">
@@ -698,6 +719,7 @@ export default function GuardianPayrollPage() {
           cell={selectedCell}
           onUpdate={handleUpdateAttendance}
           currentRecord={getRecordForCell(selectedCell.employee.id, selectedCell.day, selectedCell.shift)}
+          workLocations={workLocations}
         />
       )}
     </div>
@@ -710,12 +732,14 @@ function UpdateAttendanceDialog({
   cell,
   onUpdate,
   currentRecord,
+  workLocations,
 }: {
   isOpen: boolean;
   onClose: () => void;
   cell: { employee: Employee; day: number; shift: 'day' | 'night' };
   onUpdate: (data: Omit<AttendanceRecord, 'employeeId' | 'date' | 'shift'>) => void;
   currentRecord?: AttendanceRecord;
+  workLocations: WorkLocation[];
 }) {
   const [status, setStatus] = React.useState<AttendanceStatus | undefined>(currentRecord?.status);
   const [locationId, setLocationId] = React.useState<string | undefined>(currentRecord?.locationId);
@@ -781,7 +805,7 @@ function UpdateAttendanceDialog({
                     <SelectValue placeholder="Seleccionar servicio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {initialWorkLocations.map((loc) => (
+                    {workLocations.map((loc) => (
                       <SelectItem key={loc.id} value={loc.id}>
                         {loc.name}
                       </SelectItem>

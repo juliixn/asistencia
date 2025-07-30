@@ -44,8 +44,6 @@ import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-// import { getDataConnect } from '@/lib/dataconnect';
-// import { createWorkLocation, updateWorkLocation, deleteWorkLocation, listWorkLocations } from '@firebasegen/default-connector';
 import { initialWorkLocations } from '@/lib/data';
 
 export default function ServicesPage() {
@@ -55,78 +53,68 @@ export default function ServicesPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
     const { employee: currentUser } = useAuth();
+    const [isClient, setIsClient] = React.useState(false);
 
     const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
     
-    const fetchServices = React.useCallback(async () => {
+    const fetchServices = React.useCallback(() => {
         setIsLoading(true);
-        try {
-            // const dc = getDataConnect();
-            // const { data } = await listWorkLocations(dc, {});
-            // const mappedData: WorkLocation[] = data.map(s => ({
-            //     id: s.workLocationId,
-            //     name: s.name,
-            // }));
-            setServices(initialWorkLocations); // Using mock data until connector is ready
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar la lista de servicios.' });
-            setServices(initialWorkLocations); // Fallback to mock data
-        } finally {
-            setIsLoading(false);
+        if (typeof window !== 'undefined') {
+            const storedServices = localStorage.getItem('serviceData');
+            if (storedServices) {
+                setServices(JSON.parse(storedServices));
+            } else {
+                setServices(initialWorkLocations);
+                localStorage.setItem('serviceData', JSON.stringify(initialWorkLocations));
+            }
         }
-    }, [toast]);
+        setIsLoading(false);
+    }, []);
 
     React.useEffect(() => {
+        setIsClient(true);
         fetchServices();
     }, [fetchServices]);
-
-    const handleDelete = async (serviceId: string) => {
-        const serviceName = services.find(s => s.id === serviceId)?.name;
-        try {
-            // const dc = getDataConnect();
-            // await deleteWorkLocation(dc, { workLocationId: serviceId });
-            await fetchServices();
-            toast({
-                title: "Servicio Eliminado (Simulación)",
-                description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
-            });
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el servicio.' });
+    
+    React.useEffect(() => {
+        if (isClient) {
+            localStorage.setItem('serviceData', JSON.stringify(services));
         }
+    }, [services, isClient]);
+
+    const handleDelete = (serviceId: string) => {
+        const serviceName = services.find(s => s.id === serviceId)?.name;
+        setServices(prev => prev.filter(s => s.id !== serviceId));
+        toast({
+            title: "Servicio Eliminado",
+            description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
+        });
     }
   
     const handleEdit = (service: WorkLocation) => {
         setEditingService(service);
     }
     
-    const handleUpdateService = async (updatedService: WorkLocation) => {
-        try {
-            // const dc = getDataConnect();
-            // await updateWorkLocation(dc, { workLocationId: updatedService.id, name: updatedService.name });
-            await fetchServices();
-            toast({
-                title: "Servicio Actualizado (Simulación)",
-                description: `Se ha actualizado la información de "${updatedService.name}".`,
-            });
-            setEditingService(null);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar el servicio.' });
-        }
+    const handleUpdateService = (updatedService: WorkLocation) => {
+        setServices(prev => prev.map(s => s.id === updatedService.id ? updatedService : s));
+        toast({
+            title: "Servicio Actualizado",
+            description: `Se ha actualizado la información de "${updatedService.name}".`,
+        });
+        setEditingService(null);
     }
 
-    const handleAddService = async (newService: Omit<WorkLocation, 'id'>) => {
-        try {
-            // const dc = getDataConnect();
-            // await createWorkLocation(dc, { name: newService.name });
-            await fetchServices();
-            toast({
-                title: "Servicio Añadido (Simulación)",
-                description: `Se ha añadido "${newService.name}" a la lista de servicios.`,
-            });
-            setIsAddDialogOpen(false);
-        } catch (error) => {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo añadir el servicio.' });
-        }
+    const handleAddService = (newServiceData: Omit<WorkLocation, 'id'>) => {
+        const newService: WorkLocation = {
+            ...newServiceData,
+            id: `loc-${Date.now()}`
+        };
+        setServices(prev => [...prev, newService]);
+        toast({
+            title: "Servicio Añadido",
+            description: `Se ha añadido "${newService.name}" a la lista de servicios.`,
+        });
+        setIsAddDialogOpen(false);
     }
 
   return (
@@ -141,7 +129,7 @@ export default function ServicesPage() {
                     Añadir Servicio
                 </Button>
               </DialogTrigger>
-              <ServiceDialog onSave={handleAddService} />
+              <ServiceDialog onSave={handleAddService} onClose={() => setIsAddDialogOpen(false)} />
             </Dialog>
             </div>
         </header>
@@ -282,5 +270,3 @@ function ServiceDialog({
     </DialogContent>
   )
 }
-
-    
