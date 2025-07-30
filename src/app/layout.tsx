@@ -6,22 +6,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { BottomNavbar } from '@/components/bottom-navbar';
 import { AuthProvider } from '@/context/AuthContext';
 import React from 'react';
-
-// This can't be in the same file as the 'use client' component that uses it.
-// export const metadata: Metadata = {
-//   title: 'Guardian Payroll',
-//   description: 'Attendance and Payroll Management for Security Personnel',
-// };
+import { Sidebar } from '@/components/sidebar';
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <div className="pb-20">
-        {children}
-      </div>
-      <BottomNavbar />
+    <div className="flex h-screen bg-background">
+      <Sidebar />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto lg:pb-0 pb-20">
+            {children}
+        </div>
+        <BottomNavbar />
+      </main>
       <Toaster />
-    </>
+    </div>
   );
 }
 
