@@ -238,13 +238,13 @@ export default function PayrollPage() {
             <div className="flex items-center justify-between">
             <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Cálculo de Nómina</h1>
              <div className="flex items-center gap-2">
-                 <Button disabled>
-                    <CheckCircle className="mr-2" />
-                    Cerrar Periodo de Nómina
+                 <Button disabled size="sm">
+                    <CheckCircle className="mr-0 md:mr-2" />
+                    <span className="hidden md:inline">Cerrar Periodo</span>
                 </Button>
-                <Button variant="outline" onClick={handleExportGeneralPDF} disabled={payrollData.length === 0}>
-                    <FileDown className="mr-2" />
-                    Exportar Reporte General
+                <Button variant="outline" onClick={handleExportGeneralPDF} disabled={payrollData.length === 0} size="sm">
+                    <FileDown className="mr-0 md:mr-2" />
+                    <span className="hidden md:inline">Exportar Reporte</span>
                 </Button>
              </div>
             </div>
@@ -279,55 +279,55 @@ export default function PayrollPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                 <Card>
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                 <Card className="col-span-2 md:col-span-3 lg:col-span-1">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">$ {summary.totalNetPay.toFixed(2)}</div>
+                    <div className="text-xl md:text-2xl font-bold">$ {summary.totalNetPay.toFixed(2)}</div>
                     <p className="text-xs text-muted-foreground">Nómina neta del periodo</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Empleados en Nómina</CardTitle>
+                    <CardTitle className="text-sm font-medium">Empleados</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">+{summary.totalEmployees}</div>
-                    <p className="text-xs text-muted-foreground">Total de empleados activos</p>
+                    <div className="text-xl md:text-2xl font-bold">+{summary.totalEmployees}</div>
+                    <p className="text-xs text-muted-foreground">Activos en nómina</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Préstamos</CardTitle>
+                    <CardTitle className="text-sm font-medium">Préstamos</CardTitle>
                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">$ {summary.totalDeductions.toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">Descuentos del periodo</p>
+                    <div className="text-xl md:text-2xl font-bold">$ {summary.totalDeductions.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Descuentos</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Penalizaciones</CardTitle>
+                    <CardTitle className="text-sm font-medium">Multas</CardTitle>
                     <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">$ {summary.totalPenalties.toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">Por 3 o más retardos</p>
+                    <div className="text-xl md:text-2xl font-bold">$ {summary.totalPenalties.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Por retardos</p>
                     </CardContent>
                 </Card>
-                <Card className="xl:col-span-1">
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Bonos y Extras</CardTitle>
+                    <CardTitle className="text-sm font-medium">Bonos</CardTitle>
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">$ {summary.totalBonuses.toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground">Pagos adicionales</p>
+                    <div className="text-xl md:text-2xl font-bold">$ {summary.totalBonuses.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">Pagos extra</p>
                     </CardContent>
                 </Card>
             </div>
@@ -345,36 +345,36 @@ export default function PayrollPage() {
                                 <Table>
                                     <TableHeader className="bg-gray-50/50">
                                         <TableRow>
-                                            <TableHead>Empleado</TableHead>
-                                            <TableHead className="text-center">Turnos</TableHead>
-                                            <TableHead className="text-center">Retardos</TableHead>
-                                            <TableHead className="text-right">Sueldo Bruto</TableHead>
-                                            <TableHead className="text-right">Préstamos</TableHead>
-                                            <TableHead className="text-right">Penalización</TableHead>
-                                            <TableHead className="text-right">Bonos</TableHead>
-                                            <TableHead className="text-right font-bold">Pago Neto</TableHead>
+                                            <TableHead className="px-2 sm:px-4">Empleado</TableHead>
+                                            <TableHead className="text-center px-2 sm:px-4">Turnos</TableHead>
+                                            <TableHead className="text-center px-2 sm:px-4">Retardos</TableHead>
+                                            <TableHead className="text-right px-2 sm:px-4">Bruto</TableHead>
+                                            <TableHead className="text-right px-2 sm:px-4">Préstamo</TableHead>
+                                            <TableHead className="text-right px-2 sm:px-4">Multa</TableHead>
+                                            <TableHead className="text-right px-2 sm:px-4">Bonos</TableHead>
+                                            <TableHead className="text-right font-bold px-2 sm:px-4">Neto</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {payrollData.map(item => (
                                             <TableRow key={item.employeeId}>
-                                                <TableCell className="font-medium">{item.employeeName}</TableCell>
-                                                <TableCell className="text-center">{item.shiftsWorked}</TableCell>
-                                                <TableCell className="text-center">{item.lateArrivals}</TableCell>
-                                                <TableCell className="text-right">${item.basePay.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right text-destructive">-${item.loanDeductions.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right text-destructive">-${item.penalties.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right text-green-600">+${item.bonuses.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-bold">${item.netPay.toFixed(2)}</TableCell>
+                                                <TableCell className="font-medium px-2 sm:px-4 py-3">{item.employeeName}</TableCell>
+                                                <TableCell className="text-center px-2 sm:px-4 py-3">{item.shiftsWorked}</TableCell>
+                                                <TableCell className="text-center px-2 sm:px-4 py-3">{item.lateArrivals}</TableCell>
+                                                <TableCell className="text-right px-2 sm:px-4 py-3">${item.basePay.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-destructive px-2 sm:px-4 py-3">-${item.loanDeductions.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-destructive px-2 sm:px-4 py-3">-${item.penalties.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right text-green-600 px-2 sm:px-4 py-3">+${item.bonuses.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-bold px-2 sm:px-4 py-3">${item.netPay.toFixed(2)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             </div>
                        ) : (
-                            <p className="text-center text-muted-foreground py-12">
-                                {isCalculating ? 'Procesando datos...' : 'Presiona "Calcular Nómina" para ver los resultados.'}
-                            </p>
+                            <div className="text-center text-muted-foreground py-12">
+                                <p>{isCalculating ? 'Procesando datos...' : 'Presiona "Calcular Nómina" para ver los resultados.'}</p>
+                            </div>
                        )}
                     </CardContent>
                 </Card>
