@@ -52,48 +52,24 @@ import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { initialEmployees } from '@/lib/data';
+import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@firebasegen/default-connector';
 
 export default function EmployeesPage() {
     const { toast } = useToast();
-    const [employees, setEmployees] = React.useState<Employee[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    const { data: employees, isLoading } = ListEmployees();
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     const { employee: currentUser } = useAuth();
     
+    const { mutate: createEmployee } = CreateEmployees();
+    const { mutate: updateEmployee } = UpdateEmployees();
+    const { mutate: deleteEmployee } = DeleteEmployees();
+
     const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
-    const [isClient, setIsClient] = React.useState(false);
-
-    const fetchEmployees = React.useCallback(() => {
-        setIsLoading(true);
-        if (typeof window !== 'undefined') {
-            const storedEmployees = localStorage.getItem('employeeData');
-            if (storedEmployees) {
-                setEmployees(JSON.parse(storedEmployees));
-            } else {
-                setEmployees(initialEmployees);
-                localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
-            }
-        }
-        setIsLoading(false);
-    }, []);
-
-    React.useEffect(() => {
-        setIsClient(true);
-        fetchEmployees();
-    }, [fetchEmployees]);
-
-    React.useEffect(() => {
-        if (isClient) {
-            localStorage.setItem('employeeData', JSON.stringify(employees));
-        }
-    }, [employees, isClient]);
-
 
     const handleDelete = (employeeId: string) => {
-        const employeeName = employees.find(e => e.id === employeeId)?.name;
-        setEmployees(prev => prev.filter(e => e.id !== employeeId));
+        const employeeName = employees?.find(e => e.id === employeeId)?.name;
+        deleteEmployee([{ id: employeeId }]);
         toast({
             title: "Empleado Eliminado",
             description: `Se ha eliminado a ${employeeName} de la lista de personal.`
@@ -104,24 +80,25 @@ export default function EmployeesPage() {
         setEditingEmployee(employee);
     }
     
-    const handleUpdateEmployee = (employee: Employee) => {
-        setEmployees(prev => prev.map(e => e.id === employee.id ? employee : e));
+    const handleUpdateEmployee = (employeeData: Partial<Employee>) => {
+        if (!editingEmployee) return;
+
+        updateEmployee([{ ...employeeData, id: editingEmployee.id }]);
         toast({
             title: "Empleado Actualizado",
-            description: `Se ha actualizado la información de ${employee.name}.`,
+            description: `Se ha actualizado la información de ${employeeData.name}.`,
         });
         setEditingEmployee(null);
     }
 
     const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
-        const newEmployee: Employee = {
+        createEmployee([{
             ...newEmployeeData,
             id: `emp-${Date.now()}`,
-        };
-        setEmployees(prev => [...prev, newEmployee]);
+        }]);
         toast({
             title: "Empleado Añadido",
-            description: `Se ha añadido a ${newEmployee.name} a la lista de personal.`,
+            description: `Se ha añadido a ${newEmployeeData.name} a la lista de personal.`,
         });
         setIsAddDialogOpen(false);
     }
@@ -167,7 +144,7 @@ export default function EmployeesPage() {
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {employees.map((employee) => (
+                            {employees?.map((employee) => (
                                 <TableRow key={employee.id}>
                                     <TableCell className="font-medium px-4">{employee.name}</TableCell>
                                     <TableCell className="px-4">
@@ -224,7 +201,7 @@ export default function EmployeesPage() {
             <Dialog open={!!editingEmployee} onOpenChange={(isOpen) => !isOpen && setEditingEmployee(null)}>
                 {editingEmployee && <EmployeeDialog
                     employee={editingEmployee}
-                    onSave={(data) => handleUpdateEmployee({ ...editingEmployee, ...data})}
+                    onSave={(data) => handleUpdateEmployee(data)}
                     onClose={() => setEditingEmployee(null)}
                 />}
             </Dialog>
@@ -260,7 +237,8 @@ function EmployeeDialog({
         });
         return;
     }
-    onSave({ name, role, shiftRate, email });
+    // Type assertion is safe because we checked for `role` not being `''`
+    onSave({ name, role: role as EmployeeRole, shiftRate, email });
   }
 
   return (

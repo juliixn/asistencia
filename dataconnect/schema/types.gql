@@ -1,0 +1,107 @@
+
+"""
+The role of an employee, which determines their permissions and base pay rate.
+"""
+enum EmployeeRole {
+  Guardia
+  Supervisor
+  Coordinador
+  Dirección
+}
+
+"""
+Represents an employee in the security company.
+"""
+type Employees @table(name: "employees") {
+  id: String! @pk
+  name: String!
+  role: EmployeeRole!
+  shiftRate: Float!
+  email: String! @unique
+}
+
+"""
+Represents a work location or service post where employees are assigned.
+"""
+type WorkLocations @table(name: "work_locations") {
+  id: String! @pk
+  name: String!
+}
+
+"""
+The status of an attendance record for a specific shift.
+"""
+enum AttendanceStatus {
+  Asistencia
+  Retardo
+  Falta
+  Descanso
+  Incapacidad
+  Vacaciones
+  Enfermedad
+  PermisoCS # Con Sueldo
+  PermisoSS # Sin Sueldo
+}
+
+"""
+The shift type, either day or night.
+"""
+enum Shift {
+  day
+  night
+}
+
+"""
+Represents a single attendance record for an employee for a specific date and shift.
+"""
+type AttendanceRecords @table(name: "attendance_records") {
+  id: String! @pk
+  employeeId: String!
+  employee: Employees @foreignKey(field: "employeeId")
+  date: Date! # YYYY-MM-DD
+  shift: Shift!
+  status: AttendanceStatus!
+  locationId: String
+  location: WorkLocations @foreignKey(field: "locationId")
+  photoEvidence: String # URL or base64 string
+  notes: String
+}
+
+"""
+The repayment term for a loan.
+'única' means a single payment.
+'quincenal' means bi-weekly payments.
+"""
+enum LoanTerm {
+  única
+  quincenal
+}
+
+"""
+The current status of a loan request.
+"""
+enum LoanStatus {
+  Pendiente
+  Aprobado
+  Rechazado
+  Pagado
+}
+
+"""
+Represents a loan or payroll advance request made by an employee.
+"""
+type LoanRequests @table(name: "loan_requests") {
+  id: String! @pk
+  employeeId: String!
+  employee: Employees @foreignKey(field: "employeeId")
+  requestDate: Date! # YYYY-MM-DD
+  amount: Float!
+  term: LoanTerm!
+  installments: Int!
+  reason: String!
+  status: LoanStatus!
+  approvedById: String
+  approvedBy: Employees @foreignKey(field: "approvedById")
+  approvalDate: Date
+  signature: String! # Data-url of the signature
+}

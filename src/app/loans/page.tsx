@@ -52,12 +52,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { initialEmployees, initialLoans } from '@/lib/data';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
 import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
+import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@firebasegen/default-connector';
+
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {
   Pendiente: { label: 'Pendiente', icon: Clock, className: 'bg-yellow-100 text-yellow-800' },
@@ -68,76 +69,51 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 
 export default function LoansPage() {
-  const [loans, setLoans] = React.useState<LoanRequest[]>([]);
-  const [employees, setEmployees] = React.useState<Employee[]>([]);
+  const { data: loans, isLoading: loansLoading } = ListLoanRequests();
+  const { data: employees, isLoading: employeesLoading } = ListEmployees();
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
   const { employee: currentUser } = useAuth();
-  const [isClient, setIsClient] = React.useState(false);
 
-  React.useEffect(() => {
-    setIsClient(true);
-    if (typeof window !== 'undefined') {
-        const storedLoans = localStorage.getItem('loanData');
-        const storedEmployees = localStorage.getItem('employeeData');
-
-        if (storedLoans) {
-            setLoans(JSON.parse(storedLoans));
-        } else {
-            setLoans(initialLoans);
-            localStorage.setItem('loanData', JSON.stringify(initialLoans));
-        }
-
-        if (storedEmployees) {
-            setEmployees(JSON.parse(storedEmployees));
-        } else {
-            setEmployees(initialEmployees);
-            localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
-        }
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('loanData', JSON.stringify(loans));
-    }
-  }, [loans, isClient]);
+  const { mutate: createLoanRequest } = CreateLoanRequests();
+  const { mutate: updateLoanRequest } = UpdateLoanRequests();
 
   const handleCreateRequest = (newRequest: Omit<LoanRequest, 'id'>) => {
-    const requestWithId: LoanRequest = {
+    createLoanRequest([{
         ...newRequest,
-        id: `loan${Date.now()}`
-    }
-    setLoans(prev => [requestWithId, ...prev]);
+        id: `loan${Date.now()}`,
+    }]);
     toast({
         title: "Solicitud Creada",
-        description: `La solicitud de préstamo para ${employees.find(e => e.id === newRequest.employeeId)?.name} ha sido creada.`,
+        description: `La solicitud de préstamo para ${employees?.find(e => e.id === newRequest.employeeId)?.name} ha sido creada.`,
     })
     setIsRequestDialogOpen(false);
   }
 
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
-    setLoans(prevLoans => prevLoans.map(loan => {
-      if (loan.id === loanId && currentUser) {
-        const employee = employees.find(e => e.id === loan.employeeId);
-        toast({
-          title: `Préstamo ${newStatus}`,
-          description: `La solicitud de ${employee?.name} ha sido actualizada.`,
-        });
-        return { 
-          ...loan, 
-          status: newStatus,
-          approvedBy: currentUser.id,
-          approvalDate: new Date().toISOString().split('T')[0],
-        };
-      }
-      return loan;
-    }));
+      if (!currentUser) return;
+
+      const loan = loans?.find(l => l.id === loanId);
+      if (!loan) return;
+
+      const employee = employees?.find(e => e.id === loan.employeeId);
+      updateLoanRequest([{
+        id: loanId,
+        status: newStatus,
+        approvedById: currentUser.id,
+        approvalDate: new Date().toISOString().split('T')[0],
+      }]);
+      
+      toast({
+        title: `Préstamo ${newStatus}`,
+        description: `La solicitud de ${employee?.name} ha sido actualizada.`,
+      });
   };
 
   const canCreateRequest = currentUser?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
   const canApproveRequest = currentUser?.role === 'Dirección';
 
+  const isLoading = loansLoading || employeesLoading;
 
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
@@ -153,7 +129,7 @@ export default function LoansPage() {
                   <span className="md:hidden">Añadir</span>
                 </Button>
               </DialogTrigger>
-              <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)} employees={employees} />
+              <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)} employees={employees || []} />
             </Dialog>
           )}
         </div>
@@ -167,6 +143,11 @@ export default function LoansPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+                <div className="flex justify-center items-center h-48">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : (
              <div className="overflow-x-auto rounded-lg border">
               <Table>
                 <TableHeader className="bg-gray-50/50">
@@ -180,8 +161,8 @@ export default function LoansPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {loans.map(loan => {
-                        const employee = employees.find(e => e.id === loan.employeeId);
+                    {loans?.map(loan => {
+                        const employee = employees?.find(e => e.id === loan.employeeId);
                         const StatusIcon = statusConfig[loan.status].icon;
                         const isPending = loan.status === 'Pendiente';
 
@@ -267,6 +248,7 @@ export default function LoansPage() {
                 </TableBody>
               </Table>
             </div>
+            )}
           </CardContent>
         </Card>
       </main>
@@ -275,7 +257,7 @@ export default function LoansPage() {
 }
 
 
-function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit<LoanRequest, 'id'>) => void; onClose: () => void; employees: Employee[] }) {
+function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit<LoanRequest, 'id' | 'status'>) => void; onClose: () => void; employees: Employee[] }) {
   const [employeeId, setEmployeeId] = React.useState<string>('');
   const [amount, setAmount] = React.useState<number>(0);
   const [term, setTerm] = React.useState<'unica' | 'quincenal'>('unica');
@@ -352,7 +334,6 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             installments,
             reason,
             requestDate: new Date().toISOString().split('T')[0],
-            status: 'Pendiente',
             signature: signatureDataUrl,
         });
 

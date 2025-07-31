@@ -40,7 +40,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { initialEmployees, initialWorkLocations } from '@/lib/data';
 import type {
   Employee,
   AttendanceRecord,
@@ -61,19 +60,13 @@ import {
   FileText,
   MoreVertical,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
-import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMonth, getYear, parseISO } from 'date-fns';
+import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart, Cell } from "recharts";
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@firebasegen/default-connector';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -89,9 +82,21 @@ const ATTENDANCE_STATUS_OPTIONS: AttendanceStatus[] = [
   'Incapacidad',
   'Vacaciones',
   'Enfermedad',
-  'Permiso C/S',
-  'Permiso S/S',
+  'PermisoCS',
+  'PermisoSS',
 ];
+
+const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  Asistencia: "Asistencia",
+  Retardo: "Retardo",
+  Falta: "Falta",
+  Descanso: "Descanso",
+  Incapacidad: "Incapacidad",
+  Vacaciones: "Vacaciones",
+  Enfermedad: "Enfermedad",
+  PermisoCS: "Permiso C/S",
+  PermisoSS: "Permiso S/S",
+}
 
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
   Asistencia: 'bg-green-200 text-green-800 border border-green-300',
@@ -101,58 +106,66 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
   Incapacidad: 'bg-purple-200 text-purple-800 border border-purple-300',
   Vacaciones: 'bg-indigo-200 text-indigo-800 border border-indigo-300',
   Enfermedad: 'bg-pink-200 text-pink-800 border border-pink-300',
-  'Permiso C/S': 'bg-cyan-200 text-cyan-800 border border-cyan-300',
-  'Permiso S/S': 'bg-gray-200 text-gray-800 border border-gray-300',
+  PermisoCS: 'bg-cyan-200 text-cyan-800 border border-cyan-300',
+  PermisoSS: 'bg-gray-200 text-gray-800 border border-gray-300',
 };
 
-const PIE_CHART_COLORS: Record<string, string> = {
-  Asistencia: "hsl(var(--chart-1))",
-  Falta: "hsl(var(--chart-2))",
-  Retardo: "hsl(var(--chart-3))",
-  Descanso: "hsl(var(--chart-4))",
-  Otros: "hsl(var(--chart-5))",
-}
-
-
 export default function GuardianPayrollPage() {
-  const { user, employee, loading } = useAuth();
+  const { employee: currentUser, loading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
-  const [attendance, setAttendance] = React.useState<Record<string, AttendanceRecord>>({});
+  
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [employees, setEmployees] = React.useState<Employee[]>([]);
-  const [workLocations, setWorkLocations] = React.useState<WorkLocation[]>([]);
+
+  // --- Data Fetching ---
+  const { data: employees, isLoading: employeesLoading } = ListEmployees();
+  const { data: workLocations, isLoading: locationsLoading } = ListWorkLocations();
+  const { data: loans, isLoading: loansLoading } = ListLoanRequests({ where: { status: { eq: 'Aprobado' } } });
+  
+  const { data: attendanceRecords, isLoading: attendanceLoading } = ListAttendanceRecords({
+      where: {
+        date: { 
+          gte: format(startOfYear(currentDate), 'yyyy-MM-dd'),
+          lte: format(endOfYear(currentDate), 'yyyy-MM-dd')
+        }
+      }
+  });
+
+  const { mutate: createAttendance } = CreateAttendanceRecords();
+  const { mutate: updateAttendance } = UpdateAttendanceRecords();
+  
+  // --- Derived State ---
+  const attendanceMap = React.useMemo(() => {
+    const map: Record<string, AttendanceRecord> = {};
+    attendanceRecords?.forEach(record => {
+      const key = `${record.employeeId}-${record.date}-${record.shift}`;
+      map[key] = record;
+    });
+    return map;
+  }, [attendanceRecords]);
 
   const [selectedCell, setSelectedCell] = React.useState<{
     employee: Employee;
     day: number;
     shift: 'day' | 'night';
   } | null>(null);
-  const [isClient, setIsClient] = React.useState(false);
 
-  // States for dashboard data
   const [dashboardStats, setDashboardStats] = React.useState({
     totalAttendance: 0,
     estimatedPayroll: 0,
     absencesAndLates: 0,
     activeLoans: 0,
     activeLoansAmount: 0,
-    barChartData: [],
-    pieChartData: [],
   });
 
   const { toast } = useToast();
 
   const calculateDashboardStats = React.useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (!attendanceRecords || !loans || !employees) return;
 
-    const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
-    const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
-    const employeeData: Employee[] = JSON.parse(localStorage.getItem('employeeData') || '[]');
     const now = new Date();
     
-    // --- Cards Stats ---
-    const currentMonthRecords = Object.values(attendanceData).filter(r => {
+    const currentMonthRecords = attendanceRecords.filter(r => {
         const recordDate = parseISO(r.date);
         return getYear(recordDate) === getYear(now) && getMonth(recordDate) === getMonth(now);
     });
@@ -163,103 +176,26 @@ export default function GuardianPayrollPage() {
     const estimatedPayroll = currentMonthRecords
         .filter(r => r.status === 'Asistencia')
         .reduce((acc, r) => {
-            const employee = employeeData.find(e => e.id === r.employeeId);
+            const employee = employees.find(e => e.id === r.employeeId);
             return acc + (employee?.shiftRate || 0);
         }, 0);
     
-    const activeLoans = loanData.filter(l => l.status === 'Aprobado');
-    const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0);
-
-    // --- Pie Chart Stats ---
-    const periodStartDay = period === '1-15' ? 1 : 16;
-    const daysInMonth = getDaysInMonth(currentDate);
-    const periodEndDay = period === '1-15' ? 15 : daysInMonth;
-
-    const periodRecords = Object.values(attendanceData).filter(r => {
-        const recordDate = parseISO(r.date);
-        const recordDay = getDate(recordDate);
-        return getYear(recordDate) === getYear(currentDate) && getMonth(recordDate) === getMonth(currentDate) && recordDay >= periodStartDay && recordDay <= periodEndDay;
-    });
-
-    const pieChartDataRaw = periodRecords.reduce((acc, record) => {
-        const status = record.status;
-        if (['Asistencia', 'Falta', 'Retardo', 'Descanso'].includes(status)) {
-            acc[status] = (acc[status] || 0) + 1;
-        } else {
-            acc['Otros'] = (acc['Otros'] || 0) + 1;
-        }
-        return acc;
-    }, {} as Record<string, number>);
-
-    const pieChartData = Object.entries(pieChartDataRaw).map(([name, value]) => ({
-      name,
-      value,
-      fill: PIE_CHART_COLORS[name] || PIE_CHART_COLORS['Otros'],
-    }));
-
-    // --- Bar Chart Stats ---
-    const sixMonthsAgo = sub(startOfMonth(now), { months: 5 });
-    const monthLabels = Array.from({ length: 6 }, (_, i) => format(add(sixMonthsAgo, { months: i }), 'MMMM', { locale: es }));
-    
-    const barChartData = monthLabels.map((monthLabel, i) => {
-      const targetMonth = add(sixMonthsAgo, { months: i });
-      const monthRecords = Object.values(attendanceData).filter(r => {
-        const recordDate = parseISO(r.date);
-        return getYear(recordDate) === getYear(targetMonth) && getMonth(recordDate) === getMonth(targetMonth);
-      });
-      
-      return {
-        month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
-        Asistencias: monthRecords.filter(r => r.status === 'Asistencia').length,
-        Faltas: monthRecords.filter(r => r.status === 'Falta').length,
-      };
-    });
+    const activeLoansAmount = loans.reduce((sum, loan) => sum + loan.amount, 0);
 
     setDashboardStats({
       totalAttendance,
       estimatedPayroll,
       absencesAndLates,
-      activeLoans: activeLoans.length,
+      activeLoans: loans.length,
       activeLoansAmount: activeLoansAmount,
-      barChartData: barChartData as [],
-      pieChartData: pieChartData as [],
     });
 
-  }, [currentDate, period]);
+  }, [attendanceRecords, loans, employees]);
 
 
   React.useEffect(() => {
-    setIsClient(true);
-    if (typeof window !== 'undefined') {
-        const storedAttendance = localStorage.getItem('attendanceData');
-        const storedEmployees = localStorage.getItem('employeeData');
-        const storedServices = localStorage.getItem('serviceData');
-
-        if (storedAttendance) setAttendance(JSON.parse(storedAttendance));
-        
-        if (storedEmployees) {
-            setEmployees(JSON.parse(storedEmployees));
-        } else {
-            setEmployees(initialEmployees);
-            localStorage.setItem('employeeData', JSON.stringify(initialEmployees));
-        }
-
-        if (storedServices) {
-            setWorkLocations(JSON.parse(storedServices));
-        } else {
-            setWorkLocations(initialWorkLocations);
-            localStorage.setItem('serviceData', JSON.stringify(initialWorkLocations));
-        }
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('attendanceData', JSON.stringify(attendance));
-      calculateDashboardStats();
-    }
-  }, [attendance, isClient, calculateDashboardStats]);
-
+    calculateDashboardStats();
+  }, [calculateDashboardStats]);
 
   const handlePeriodChange = (value: string) => {
     setPeriod(value as PayrollPeriod);
@@ -282,12 +218,21 @@ export default function GuardianPayrollPage() {
     setDialogOpen(true);
   };
 
-  const handleUpdateAttendance = (formData: Omit<AttendanceRecord, 'employeeId' | 'date' | 'shift'>) => {
+  const handleUpdateAttendance = (formData: Omit<AttendanceRecord, 'id' | 'employeeId' | 'date' | 'shift'>) => {
     if (!selectedCell) return;
     const { employee, day, shift } = selectedCell;
     const date = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), 'yyyy-MM-dd');
     const key = `${employee.id}-${date}-${shift}`;
-    setAttendance((prev) => ({ ...prev, [key]: { ...formData, employeeId: employee.id, date, shift } }));
+    const existingRecord = attendanceMap[key];
+
+    const recordPayload = { ...formData, employeeId: employee.id, date, shift };
+
+    if (existingRecord) {
+        updateAttendance([{ id: existingRecord.id, ...recordPayload }]);
+    } else {
+        createAttendance([{ id: `att-${Date.now()}`, ...recordPayload }]);
+    }
+
     toast({ title: 'Asistencia Actualizada', description: `Se guardó el registro para ${employee.name}.` });
     setDialogOpen(false);
     setSelectedCell(null);
@@ -296,20 +241,17 @@ export default function GuardianPayrollPage() {
   const getRecordForCell = (employeeId: string, day: number, shift: 'day' | 'night') => {
      const date = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), 'yyyy-MM-dd');
      const key = `${employeeId}-${date}-${shift}`;
-     return attendance[key];
+     return attendanceMap[key];
   }
   
   const handleExportIndividualPDF = (employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
+    const employee = employees?.find(e => e.id === employeeId);
     if (!employee) return;
 
     toast({
         title: 'Exportando PDF...',
         description: `Generando la nómina para ${employee.name}.`
     });
-
-    const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
-    const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -326,17 +268,17 @@ export default function GuardianPayrollPage() {
         const dayKey = `${employee.id}-${dateStr}-day`;
         const nightKey = `${employee.id}-${dateStr}-night`;
 
-        if (attendanceData[dayKey]?.status === 'Asistencia') shiftsWorked++;
-        if (attendanceData[nightKey]?.status === 'Asistencia') shiftsWorked++;
-        if (attendanceData[dayKey]?.status === 'Retardo') lateArrivals++;
-        if (attendanceData[nightKey]?.status === 'Retardo') lateArrivals++;
-        if (attendanceData[dayKey]?.status === 'Falta') absences++;
-        if (attendanceData[nightKey]?.status === 'Falta') absences++;
+        if (attendanceMap[dayKey]?.status === 'Asistencia') shiftsWorked++;
+        if (attendanceMap[nightKey]?.status === 'Asistencia') shiftsWorked++;
+        if (attendanceMap[dayKey]?.status === 'Retardo') lateArrivals++;
+        if (attendanceMap[nightKey]?.status === 'Retardo') lateArrivals++;
+        if (attendanceMap[dayKey]?.status === 'Falta') absences++;
+        if (attendanceMap[nightKey]?.status === 'Falta') absences++;
     }
 
     const basePay = shiftsWorked * employee.shiftRate;
 
-    const activeLoan = loanData.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
+    const activeLoan = loans?.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
     let loanDeductions = 0;
     if (activeLoan && activeLoan.term === 'quincenal' && activeLoan.installments > 0) {
         loanDeductions = activeLoan.amount / activeLoan.installments;
@@ -351,45 +293,27 @@ export default function GuardianPayrollPage() {
     const doc = new jsPDF();
     const periodText = `Periodo: ${startDay}-${endDay} de ${format(currentDate, 'MMMM yyyy', { locale: es })}`;
     
-    // Header
     doc.setFontSize(18);
     doc.text('Recibo de Nómina', 105, 20, { align: 'center' });
     doc.setFontSize(12);
     doc.text('Guardian Payroll', 105, 28, { align: 'center' });
-
-    // Employee Info
     doc.setFontSize(14);
     doc.text('Información del Empleado', 14, 45);
     doc.autoTable({
         startY: 50,
-        body: [
-            ['Nombre', employee.name],
-            ['Puesto', employee.role],
-            ['Periodo de Pago', periodText],
-        ],
+        body: [['Nombre', employee.name], ['Puesto', employee.role], ['Periodo de Pago', periodText]],
         theme: 'plain',
         styles: { fontSize: 10 },
     });
 
-    // Payroll Details
     const finalY = (doc as any).lastAutoTable.finalY || 70;
     doc.setFontSize(14);
     doc.text('Desglose de Pago', 14, finalY + 15);
 
-    const perceptions = [
-        ['Sueldo por Turnos Trabajados', `${shiftsWorked} turnos`, `$${basePay.toFixed(2)}`],
-        ['Bonos Adicionales', '', `$${bonuses.toFixed(2)}`],
-    ];
-    
-    const deductions = [
-        ['Adelantos / Préstamos', '', `-$${loanDeductions.toFixed(2)}`],
-        ['Otras Deducciones', '', `-$${otherDeductions.toFixed(2)}`],
-    ];
-
     doc.autoTable({
         startY: finalY + 20,
         head: [['PERCEPCIONES', 'Detalle', 'Monto']],
-        body: perceptions,
+        body: [['Sueldo por Turnos Trabajados', `${shiftsWorked} turnos`, `$${basePay.toFixed(2)}`], ['Bonos Adicionales', '', `$${bonuses.toFixed(2)}`]],
         theme: 'striped',
         headStyles: { fillColor: [22, 163, 74], textColor: 255 },
     });
@@ -398,55 +322,36 @@ export default function GuardianPayrollPage() {
     doc.autoTable({
         startY: secondTableY + 5,
         head: [['DEDUCCIONES', 'Detalle', 'Monto']],
-        body: deductions,
+        body: [['Adelantos / Préstamos', '', `-$${loanDeductions.toFixed(2)}`], ['Otras Deducciones', '', `-$${otherDeductions.toFixed(2)}`]],
         theme: 'striped',
         headStyles: { fillColor: [220, 53, 69], textColor: 255 },
     });
 
-    // Totals
     const thirdTableY = (doc as any).lastAutoTable.finalY;
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('PAGO NETO:', 140, thirdTableY + 15, { align: 'right' });
     doc.text(`$${netPay.toFixed(2)}`, 200, thirdTableY + 15, { align: 'right' });
 
-    // Summary
     const summaryY = thirdTableY + 25;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Resumen de Asistencia del Periodo:', 14, summaryY);
     doc.autoTable({
         startY: summaryY + 5,
-        body: [
-            ['Turnos con Asistencia', shiftsWorked],
-            ['Retardos Registrados', lateArrivals],
-            ['Faltas Registradas', absences],
-        ],
+        body: [['Turnos con Asistencia', shiftsWorked], ['Retardos Registrados', lateArrivals], ['Faltas Registradas', absences]],
         theme: 'grid',
     });
 
     doc.save(`recibo_nomina_${employee.name.replace(/ /g, '_')}_${periodText.replace(/ /g, '_')}.pdf`);
   }
   
-  const barChartConfig = {
-    Asistencias: { label: "Asistencias", color: "hsl(var(--chart-1))" },
-    Faltas: { label: "Faltas", color: "hsl(var(--chart-2))" },
-  }
+  const canEditAttendance = currentUser?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
+  const canExportPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
-  const pieChartConfig = {
-    value: { label: "Turnos" },
-    Asistencia: { label: "Asistencias", color: "hsl(var(--chart-1))" },
-    Falta: { label: "Faltas", color: "hsl(var(--chart-2))" },
-    Retardo: { label: "Retardos", color: "hsl(var(--chart-3))" },
-    Descanso: { label: "Descansos", color: "hsl(var(--chart-4))" },
-    Otros: { label: "Otros", color: "hsl(var(--chart-5))" },
-  }
+  const isLoading = authLoading || employeesLoading || locationsLoading || loansLoading || attendanceLoading;
 
-  const canEditAttendance = employee?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(employee.role);
-  const canExportPayroll = employee?.role && ['Coordinador', 'Dirección'].includes(employee.role);
-
-
-  if (loading) {
+  if (isLoading) {
     return (
         <div className="flex flex-col h-screen bg-gray-50/50 p-6">
             <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10 rounded-lg mb-6">
@@ -464,25 +369,6 @@ export default function GuardianPayrollPage() {
                     </Card>
                 ))}
             </div>
-             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5 mb-6">
-                <Card className="lg:col-span-3 h-80">
-                    <CardHeader>
-                        <Skeleton className="h-6 w-3/4" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-full w-full" />
-                    </CardContent>
-                </Card>
-                <Card className="lg:col-span-2 h-80">
-                     <CardHeader>
-                        <Skeleton className="h-6 w-3/4" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-full w-full" />
-                    </CardContent>
-                </Card>
-             </div>
-
             <Card className="shadow-lg border-t-4 border-primary">
                 <CardHeader>
                      <Skeleton className="h-8 w-1/3" />
@@ -492,7 +378,6 @@ export default function GuardianPayrollPage() {
                      <Skeleton className="h-64 w-full" />
                 </CardContent>
             </Card>
-
         </div>
     );
   }
@@ -553,7 +438,7 @@ export default function GuardianPayrollPage() {
           <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex flex-col">
               <CardTitle className="font-headline text-lg md:text-xl">
-                Registro de Asistencia: {isClient ? format(currentDate, 'MMMM yyyy', { locale: es }) : ''}
+                Registro de Asistencia: {format(currentDate, 'MMMM yyyy', { locale: es })}
               </CardTitle>
               <CardDescription className="text-sm">
                 Selecciona un empleado y día para registrar la asistencia.
@@ -594,7 +479,7 @@ export default function GuardianPayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((employeeRow) => (
+                  {employees?.map((employeeRow) => (
                     <TableRow key={employeeRow.id} className="hover:bg-primary/5">
                       <TableCell className="sticky left-0 bg-white hover:bg-primary/5 z-10 font-medium px-2 py-3 sm:px-4">
                         <div className="flex items-center justify-between gap-2">
@@ -636,14 +521,14 @@ export default function GuardianPayrollPage() {
                                       className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
                                       disabled={isFuture || !canEditAttendance}
                                     >
-                                        {dayRecord?.status.charAt(0) || 'D'}
+                                        {dayRecord ? dayRecord.status.charAt(0) : 'D'}
                                     </button>
                                     <button 
                                       onClick={() => canEditAttendance && !isFuture && handleCellClick(employeeRow, day, 'night')} 
                                       className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
                                       disabled={isFuture || !canEditAttendance}
                                     >
-                                        {nightRecord?.status.charAt(0) || 'N'}
+                                        {nightRecord ? nightRecord.status.charAt(0) : 'N'}
                                     </button>
                                 </div>
                             </TableCell>
@@ -664,7 +549,7 @@ export default function GuardianPayrollPage() {
           cell={selectedCell}
           onUpdate={handleUpdateAttendance}
           currentRecord={getRecordForCell(selectedCell.employee.id, selectedCell.day, selectedCell.shift)}
-          workLocations={workLocations}
+          workLocations={workLocations || []}
         />
       )}
     </div>
@@ -682,7 +567,7 @@ function UpdateAttendanceDialog({
   isOpen: boolean;
   onClose: () => void;
   cell: { employee: Employee; day: number; shift: 'day' | 'night' };
-  onUpdate: (data: Omit<AttendanceRecord, 'employeeId' | 'date' | 'shift'>) => void;
+  onUpdate: (data: Omit<AttendanceRecord, 'id' | 'employeeId' | 'date' | 'shift'>) => void;
   currentRecord?: AttendanceRecord;
   workLocations: WorkLocation[];
 }) {
@@ -736,7 +621,7 @@ function UpdateAttendanceDialog({
                   <div key={opt}>
                     <RadioGroupItem value={opt} id={opt} className="sr-only" />
                     <Label htmlFor={opt} className={`flex items-center text-xs sm:text-sm justify-center p-2 rounded-md border-2 cursor-pointer transition-all duration-200 ${status === opt ? 'border-primary ring-2 ring-primary/50' : 'border-gray-200'} ${STATUS_COLORS[opt]}`}>
-                      {opt}
+                      {ATTENDANCE_STATUS_LABELS[opt]}
                     </Label>
                   </div>
                 ))}

@@ -1,6 +1,7 @@
+
 specVersion: "v1"
-serviceId: "asistencia "
-location: "northamerica-northeast1"
+serviceId: "asistencia-y-nomina"
+location: "us-central1"
 schema:
   source: "./schema"
   datasource:
@@ -8,5 +9,4 @@ schema:
       database: "fdcdb"
       cloudSql:
         instanceId: "studio-fdc"
-      # schemaValidation: "COMPATIBLE"
 connectorDirs: ["./connector"]

@@ -22,12 +22,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator, AlertTriangle, Lock } from 'lucide-react';
-import { format, getDaysInMonth } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { initialEmployees } from '@/lib/data';
 import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
+import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@firebasegen/default-connector';
 
 
 declare module 'jspdf' {
@@ -66,6 +66,14 @@ export default function PayrollPage() {
 
   const canAccessPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
+  const startDay = period === '1-15' ? 1 : 16;
+  const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);
+  const startDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), startDay), 'yyyy-MM-dd');
+  const endDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), endDay), 'yyyy-MM-dd');
+
+  const { data: employees } = ListEmployees();
+  const { data: attendanceData } = ListAttendanceRecords({ where: { date: { gte: startDate, lte: endDate } } });
+  const { data: loanData } = ListLoanRequests({ where: { status: { eq: 'Aprobado' } } });
 
   const handleCalculatePayroll = () => {
     setIsCalculating(true);
@@ -74,37 +82,26 @@ export default function PayrollPage() {
         description: "Por favor espera mientras procesamos los datos.",
     });
 
-    // Simulate calculation delay
+    if (!employees || !attendanceData || !loanData) {
+        toast({
+            variant: "destructive",
+            title: "Datos incompletos",
+            description: "No se pudieron cargar todos los datos necesarios para el cálculo.",
+        });
+        setIsCalculating(false);
+        return;
+    }
+
     setTimeout(() => {
-        const attendanceData: Record<string, AttendanceRecord> = JSON.parse(localStorage.getItem('attendanceData') || '{}');
-        const loanData: LoanRequest[] = JSON.parse(localStorage.getItem('loanData') || '[]');
-        const employeeData: Employee[] = JSON.parse(localStorage.getItem('employeeData') || '[]');
-
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const daysInMonth = getDaysInMonth(currentDate);
-
-        const startDay = period === '1-15' ? 1 : 16;
-        const endDay = period === '1-15' ? 15 : daysInMonth;
-
-        const calculatedPayroll = employeeData.map(employee => {
-            let shiftsWorked = 0;
-            let lateArrivals = 0;
+        const calculatedPayroll = employees.map(employee => {
+            const employeeAttendance = attendanceData.filter(a => a.employeeId === employee.id);
             
-            for (let day = startDay; day <= endDay; day++) {
-                const dateStr = format(new Date(year, month, day), 'yyyy-MM-dd');
-                const dayKey = `${employee.id}-${dateStr}-day`;
-                const nightKey = `${employee.id}-${dateStr}-night`;
-
-                if (attendanceData[dayKey]?.status === 'Asistencia') shiftsWorked++;
-                if (attendanceData[nightKey]?.status === 'Asistencia') shiftsWorked++;
-                if (attendanceData[dayKey]?.status === 'Retardo') lateArrivals++;
-                if (attendanceData[nightKey]?.status === 'Retardo') lateArrivals++;
-            }
-
+            const shiftsWorked = employeeAttendance.filter(a => a.status === 'Asistencia').length;
+            const lateArrivals = employeeAttendance.filter(a => a.status === 'Retardo').length;
+            
             const basePay = shiftsWorked * employee.shiftRate;
 
-            const activeLoan = loanData.find(l => l.employeeId === employee.id && l.status === 'Aprobado');
+            const activeLoan = loanData.find(l => l.employeeId === employee.id);
             let loanDeductions = 0;
             if (activeLoan && activeLoan.term === 'quincenal' && activeLoan.installments > 0) {
                  loanDeductions = activeLoan.amount / activeLoan.installments;
@@ -112,9 +109,7 @@ export default function PayrollPage() {
                  loanDeductions = activeLoan.amount;
             }
 
-            // Penalty logic: if 3 or more lates, penalize with 50% of shift rate
             const penalties = lateArrivals >= 3 ? employee.shiftRate * 0.5 : 0;
-
             const bonuses = 0; // Placeholder for future bonus logic
             const netPay = basePay - loanDeductions - penalties + bonuses;
 
@@ -151,7 +146,7 @@ export default function PayrollPage() {
             title: "Cálculo Completado",
             description: "La pre-nómina ha sido generada.",
         });
-    }, 1500);
+    }, 500);
   }
 
   const handleExportGeneralPDF = () => {

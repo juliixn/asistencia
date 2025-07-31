@@ -44,47 +44,24 @@ import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { initialWorkLocations } from '@/lib/data';
+import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@firebasegen/default-connector';
 
 export default function ServicesPage() {
     const { toast } = useToast();
-    const [services, setServices] = React.useState<WorkLocation[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    const { data: services, isLoading } = ListWorkLocations();
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
     const { employee: currentUser } = useAuth();
-    const [isClient, setIsClient] = React.useState(false);
+    
+    const { mutate: createService } = CreateWorkLocations();
+    const { mutate: updateService } = UpdateWorkLocations();
+    const { mutate: deleteService } = DeleteWorkLocations();
 
     const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
     
-    const fetchServices = React.useCallback(() => {
-        setIsLoading(true);
-        if (typeof window !== 'undefined') {
-            const storedServices = localStorage.getItem('serviceData');
-            if (storedServices) {
-                setServices(JSON.parse(storedServices));
-            } else {
-                setServices(initialWorkLocations);
-                localStorage.setItem('serviceData', JSON.stringify(initialWorkLocations));
-            }
-        }
-        setIsLoading(false);
-    }, []);
-
-    React.useEffect(() => {
-        setIsClient(true);
-        fetchServices();
-    }, [fetchServices]);
-    
-    React.useEffect(() => {
-        if (isClient) {
-            localStorage.setItem('serviceData', JSON.stringify(services));
-        }
-    }, [services, isClient]);
-
     const handleDelete = (serviceId: string) => {
-        const serviceName = services.find(s => s.id === serviceId)?.name;
-        setServices(prev => prev.filter(s => s.id !== serviceId));
+        const serviceName = services?.find(s => s.id === serviceId)?.name;
+        deleteService([{ id: serviceId }]);
         toast({
             title: "Servicio Eliminado",
             description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
@@ -95,24 +72,24 @@ export default function ServicesPage() {
         setEditingService(service);
     }
     
-    const handleUpdateService = (updatedService: WorkLocation) => {
-        setServices(prev => prev.map(s => s.id === updatedService.id ? updatedService : s));
+    const handleUpdateService = (updatedServiceData: Omit<WorkLocation, 'id'>) => {
+        if (!editingService) return;
+        updateService([{ ...updatedServiceData, id: editingService.id }]);
         toast({
             title: "Servicio Actualizado",
-            description: `Se ha actualizado la información de "${updatedService.name}".`,
+            description: `Se ha actualizado la información de "${updatedServiceData.name}".`,
         });
         setEditingService(null);
     }
 
     const handleAddService = (newServiceData: Omit<WorkLocation, 'id'>) => {
-        const newService: WorkLocation = {
+        createService([{
             ...newServiceData,
             id: `loc-${Date.now()}`
-        };
-        setServices(prev => [...prev, newService]);
+        }]);
         toast({
             title: "Servicio Añadido",
-            description: `Se ha añadido "${newService.name}" a la lista de servicios.`,
+            description: `Se ha añadido "${newServiceData.name}" a la lista de servicios.`,
         });
         setIsAddDialogOpen(false);
     }
@@ -156,7 +133,7 @@ export default function ServicesPage() {
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {services.map((location) => (
+                                {services?.map((location) => (
                                     <TableRow key={location.id}>
                                         <TableCell className="font-medium px-4">{location.name}</TableCell>
                                         <TableCell className="text-right px-4">
@@ -208,7 +185,7 @@ export default function ServicesPage() {
          <Dialog open={!!editingService} onOpenChange={(isOpen) => !isOpen && setEditingService(null)}>
             {editingService && <ServiceDialog
                 service={editingService}
-                onSave={(data) => handleUpdateService({ ...editingService, ...data})}
+                onSave={(data) => handleUpdateService(data)}
                 onClose={() => setEditingService(null)}
             />}
         </Dialog>
