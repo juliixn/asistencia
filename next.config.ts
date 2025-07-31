@@ -18,12 +18,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  devServer: {
-    allowedDevOrigins: [
-      'https://*.cloudworkstations.dev',
-      'https://*.firebase.studio',
-    ],
-  },
 };
 
 export default nextConfig;
