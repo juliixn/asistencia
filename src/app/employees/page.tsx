@@ -75,7 +75,7 @@ export default function EmployeesPage() {
     });
 
     const { mutate: updateEmployee } = useMutation({
-        mutationFn: (args: { employees: Partial<Employee> & { id: string }[] }) => UpdateEmployees(dataConnect, { values: args.employees }),
+        mutationFn: (args: { employees: (Partial<Employee> & { id: string })[] }) => UpdateEmployees(dataConnect, { values: args.employees }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['employees'] });
         },
