@@ -44,7 +44,7 @@ import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@firebasegen/default-connector';
+import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@/dataconnect/hooks';
 
 export default function ServicesPage() {
     const { toast } = useToast();

@@ -27,7 +27,7 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@firebasegen/default-connector';
+import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@/dataconnect/hooks';
 
 
 declare module 'jspdf' {

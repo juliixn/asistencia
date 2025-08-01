@@ -66,7 +66,7 @@ import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMo
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@firebasegen/default-connector';
+import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@/dataconnect/hooks';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -432,7 +432,6 @@ export default function GuardianPayrollPage() {
             </CardContent>
           </Card>
         </div>
-
         
         <Card className="shadow-lg border-t-4 border-primary">
           <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

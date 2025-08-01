@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { Employee } from '@/lib/types';
-import { ListEmployees } from '@firebasegen/default-connector';
+import { ListEmployees } from '@/dataconnect/hooks';
 
 // This context provides a simulated "logged-in" user experience.
 // In a real-world scenario, you would integrate a full authentication provider.

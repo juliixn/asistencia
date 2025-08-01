@@ -57,7 +57,7 @@ import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, Thumbs
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
-import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@firebasegen/default-connector';
+import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@/dataconnect/hooks';
 
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {

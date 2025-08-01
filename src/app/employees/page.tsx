@@ -52,7 +52,7 @@ import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@firebasegen/default-connector';
+import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@/dataconnect/hooks';
 
 export default function EmployeesPage() {
     const { toast } = useToast();
