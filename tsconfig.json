@@ -21,7 +21,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@firebasegen/default-connector": ["./dataconnect-generated/js/default-connector"]
+      "@firebasegen/default-connector": ["./src/dataconnect/default-connector"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
