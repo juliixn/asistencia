@@ -1,17 +1,35 @@
 
-import type { 
-    Employees, 
-    WorkLocations,
-    LoanRequests,
-    AttendanceRecords
-} from '@/dataconnect/generated';
-
 export type EmployeeRole = "Guardia" | "Supervisor" | "Coordinador" | "Dirección";
 
-export type Employee = Employees;
-export type WorkLocation = WorkLocations;
-export type LoanRequest = LoanRequests;
-export type AttendanceRecord = AttendanceRecords;
+export interface Employee {
+  id: string;
+  name: string;
+  role: EmployeeRole;
+  shiftRate: number;
+  email: string;
+}
+
+export interface WorkLocation {
+    id: string;
+    name: string;
+}
+
+export type LoanStatus = "Pendiente" | "Aprobado" | "Rechazado" | "Pagado";
+export type LoanTerm = "única" | "quincenal";
+
+export interface LoanRequest {
+  id: string;
+  employeeId: string;
+  amount: number;
+  reason: string;
+  term: LoanTerm;
+  installments: number;
+  status: LoanStatus;
+  requestDate: string; // YYYY-MM-DD
+  approvalDate: string | null; // YYYY-MM-DD
+  approvedById: string | null;
+  signature: string; // Data URL of the signature image
+}
 
 
 export type AttendanceStatus = 
@@ -24,6 +42,18 @@ export type AttendanceStatus =
   | "Enfermedad"
   | "PermisoCS" // Con Sueldo
   | "PermisoSS"; // Sin Sueldo
+
+export interface AttendanceRecord {
+    id: string;
+    employeeId: string;
+    date: string; // YYYY-MM-DD
+    shift: 'day' | 'night';
+    status: AttendanceStatus;
+    locationId: string | null;
+    notes: string | null;
+    photoEvidence: string | null; // URL or data URL of the photo
+}
+
 
 export type PayrollPeriod = "1-15" | "16-end";
 
@@ -38,9 +68,6 @@ export interface PayrollBonus {
   amount: number;
   description: string;
 }
-
-export type LoanStatus = "Pendiente" | "Aprobado" | "Rechazado" | "Pagado";
-export type LoanTerm = "única" | "quincenal";
 
 export interface PayrollDetail {
     employeeId: string;

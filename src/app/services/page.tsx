@@ -44,48 +44,78 @@ import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@/dataconnect/generated';
-import { getDataConnect } from '@/lib/dataconnect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { initialData } from '@/lib/data';
+
+
+// --- MOCK API FUNCTIONS ---
+async function fetchWorkLocations(): Promise<WorkLocation[]> {
+  const data = localStorage.getItem('workLocations');
+  return data ? JSON.parse(data) : initialData.workLocations;
+}
+
+async function createWorkLocation(newService: Omit<WorkLocation, 'id'>): Promise<WorkLocation> {
+  const services = await fetchWorkLocations();
+  const createdService: WorkLocation = { ...newService, id: `loc-${Date.now()}`};
+  const updatedServices = [...services, createdService];
+  localStorage.setItem('workLocations', JSON.stringify(updatedServices));
+  return createdService;
+}
+
+async function updateWorkLocation(updatedService: WorkLocation): Promise<WorkLocation> {
+  const services = await fetchWorkLocations();
+  const index = services.findIndex(s => s.id === updatedService.id);
+  if (index === -1) throw new Error("Service not found");
+  services[index] = updatedService;
+  localStorage.setItem('workLocations', JSON.stringify(services));
+  return updatedService;
+}
+
+async function deleteWorkLocation(serviceId: string): Promise<{ id: string }> {
+    const services = await fetchWorkLocations();
+    const updatedServices = services.filter(s => s.id !== serviceId);
+    localStorage.setItem('workLocations', JSON.stringify(updatedServices));
+    return { id: serviceId };
+}
+
 
 export default function ServicesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const dataConnect = getDataConnect();
     
     const { data: services, isLoading } = useQuery({
         queryKey: ['workLocations'],
-        queryFn: () => ListWorkLocations(dataConnect, {}),
+        queryFn: fetchWorkLocations,
     });
 
-    const { mutate: createService } = useMutation({
-        mutationFn: (newServiceData: Omit<WorkLocation, 'id'>) => CreateWorkLocations(dataConnect, { values: [{ ...newServiceData, id: `loc-${Date.now()}` }] }),
-        onSuccess: (data, variables) => {
+    const createMutation = useMutation({
+        mutationFn: createWorkLocation,
+        onSuccess: (data) => {
             toast({
                 title: "Servicio Añadido",
-                description: `Se ha añadido "${variables.name}" a la lista de servicios.`,
+                description: `Se ha añadido "${data.name}" a la lista de servicios.`,
             });
             queryClient.invalidateQueries({ queryKey: ['workLocations'] });
             setIsAddDialogOpen(false);
         }
     });
 
-    const { mutate: updateService } = useMutation({
-        mutationFn: (updatedServiceData: WorkLocation) => UpdateWorkLocations(dataConnect, { values: [updatedServiceData] }),
-        onSuccess: (data, variables) => {
+    const updateMutation = useMutation({
+        mutationFn: updateWorkLocation,
+        onSuccess: (data) => {
             toast({
                 title: "Servicio Actualizado",
-                description: `Se ha actualizado la información de "${variables.name}".`,
+                description: `Se ha actualizado la información de "${data.name}".`,
             });
             queryClient.invalidateQueries({ queryKey: ['workLocations'] });
             setEditingService(null);
         }
     });
 
-    const { mutate: deleteService } = useMutation({
-        mutationFn: (serviceId: string) => DeleteWorkLocations(dataConnect, { values: [{ id: serviceId }] }),
-        onSuccess: (data, variables) => {
-            const serviceName = services?.find(s => s.id === variables)?.name;
+    const deleteMutation = useMutation({
+        mutationFn: deleteWorkLocation,
+        onSuccess: (data) => {
+            const serviceName = services?.find(s => s.id === data.id)?.name || 'El servicio';
             toast({
                 title: "Servicio Eliminado",
                 description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
@@ -101,7 +131,7 @@ export default function ServicesPage() {
     const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
     
     const handleDelete = (serviceId: string) => {
-        deleteService(serviceId);
+        deleteMutation.mutate(serviceId);
     }
   
     const handleEdit = (service: WorkLocation) => {
@@ -110,11 +140,11 @@ export default function ServicesPage() {
     
     const handleUpdateService = (updatedServiceData: Omit<WorkLocation, 'id'>) => {
         if (!editingService) return;
-        updateService({ ...updatedServiceData, id: editingService.id });
+        updateMutation.mutate({ ...updatedServiceData, id: editingService.id });
     }
 
     const handleAddService = (newServiceData: Omit<WorkLocation, 'id'>) => {
-        createService(newServiceData);
+        createMutation.mutate(newServiceData);
     }
 
   return (

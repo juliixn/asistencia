@@ -57,10 +57,8 @@ import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, Thumbs
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
-import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@/dataconnect/generated';
-import { getDataConnect } from '@/lib/dataconnect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
+import { initialData } from '@/lib/data';
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {
   Pendiente: { label: 'Pendiente', icon: Clock, className: 'bg-yellow-100 text-yellow-800' },
@@ -70,28 +68,58 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 };
 
 
+// --- MOCK API FUNCTIONS ---
+async function fetchLoanRequests(): Promise<LoanRequest[]> {
+  const data = localStorage.getItem('loanRequests');
+  return data ? JSON.parse(data) : initialData.loanRequests;
+}
+
+async function fetchEmployees(): Promise<Employee[]> {
+  const data = localStorage.getItem('employees');
+  return data ? JSON.parse(data) : initialData.employees;
+}
+
+async function createLoanRequest(newRequest: Omit<LoanRequest, 'id'>): Promise<LoanRequest> {
+  const loans = await fetchLoanRequests();
+  const createdLoan: LoanRequest = { ...newRequest, id: `loan-${Date.now()}`};
+  const updatedLoans = [...loans, createdLoan];
+  localStorage.setItem('loanRequests', JSON.stringify(updatedLoans));
+  return createdLoan;
+}
+
+async function updateLoanRequest(updatedLoan: Partial<LoanRequest> & { id: string }): Promise<LoanRequest> {
+  const loans = await fetchLoanRequests();
+  const index = loans.findIndex(l => l.id === updatedLoan.id);
+  if (index === -1) throw new Error("Loan not found");
+  const loanToUpdate = loans[index];
+  const newLoanData = { ...loanToUpdate, ...updatedLoan };
+  loans[index] = newLoanData;
+  localStorage.setItem('loanRequests', JSON.stringify(loans));
+  return newLoanData;
+}
+
+
 export default function LoansPage() {
   const queryClient = useQueryClient();
-  const dataConnect = getDataConnect();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
     queryKey: ['loans'],
-    queryFn: () => ListLoanRequests(dataConnect, {}),
+    queryFn: fetchLoanRequests,
   });
 
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => ListEmployees(dataConnect, {}),
+    queryFn: fetchEmployees,
   });
 
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
   const { employee: currentUser } = useAuth();
 
-  const { mutate: createLoanRequest } = useMutation({
-    mutationFn: (newRequest: Omit<LoanRequest, 'id'>) => CreateLoanRequests(dataConnect, { values: [{...newRequest, id: `loan${Date.now()}`}] }),
-    onSuccess: (data, variables) => {
-        const employeeName = employees?.find(e => e.id === variables.employeeId)?.name;
+  const createMutation = useMutation({
+    mutationFn: createLoanRequest,
+    onSuccess: (data) => {
+        const employeeName = employees?.find(e => e.id === data.employeeId)?.name;
         toast({
             title: "Solicitud Creada",
             description: `La solicitud de préstamo para ${employeeName} ha sido creada.`,
@@ -101,14 +129,14 @@ export default function LoansPage() {
     }
   });
 
-  const { mutate: updateLoanRequest } = useMutation({
-    mutationFn: (args: Partial<LoanRequest> & { id: string }) => UpdateLoanRequests(dataConnect, { values: [args] }),
-    onSuccess: (data, variables) => {
-      const loan = loans?.find(l => l.id === variables.id);
+  const updateMutation = useMutation({
+    mutationFn: updateLoanRequest,
+    onSuccess: (data) => {
+      const loan = loans?.find(l => l.id === data.id);
       if (!loan) return;
       const employee = employees?.find(e => e.id === loan.employeeId);
       toast({
-        title: `Préstamo ${variables.status}`,
+        title: `Préstamo ${data.status}`,
         description: `La solicitud de ${employee?.name} ha sido actualizada.`,
       });
       queryClient.invalidateQueries({ queryKey: ['loans'] });
@@ -116,7 +144,7 @@ export default function LoansPage() {
   });
 
   const handleCreateRequest = (newRequest: Omit<LoanRequest, 'id'>) => {
-    createLoanRequest(newRequest);
+    createMutation.mutate(newRequest);
   }
 
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
@@ -125,7 +153,7 @@ export default function LoansPage() {
       const loan = loans?.find(l => l.id === loanId);
       if (!loan) return;
       
-      updateLoanRequest({
+      updateMutation.mutate({
         id: loanId,
         status: newStatus,
         approvedById: currentUser.id,
@@ -280,7 +308,7 @@ export default function LoansPage() {
 }
 
 
-function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit<LoanRequest, 'id' | 'status'>) => void; onClose: () => void; employees: Employee[] }) {
+function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit<LoanRequest, 'id'>) => void; onClose: () => void; employees: Employee[] }) {
   const [employeeId, setEmployeeId] = React.useState<string>('');
   const [amount, setAmount] = React.useState<number>(0);
   const [term, setTerm] = React.useState<'unica' | 'quincenal'>('unica');

@@ -52,39 +52,85 @@ import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@/dataconnect/generated';
-import { getDataConnect } from '@/lib/dataconnect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { initialData } from '@/lib/data';
+
+
+// --- MOCK API FUNCTIONS ---
+async function fetchEmployees(): Promise<Employee[]> {
+  const data = localStorage.getItem('employees');
+  return data ? JSON.parse(data) : initialData.employees;
+}
+
+async function createEmployee(newEmployee: Omit<Employee, 'id'>): Promise<Employee> {
+  const employees = await fetchEmployees();
+  const createdEmployee: Employee = { ...newEmployee, id: `emp-${Date.now()}`};
+  const updatedEmployees = [...employees, createdEmployee];
+  localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+  return createdEmployee;
+}
+
+async function updateEmployee(updatedEmployee: Partial<Employee> & { id: string }): Promise<Employee> {
+  const employees = await fetchEmployees();
+  const index = employees.findIndex(e => e.id === updatedEmployee.id);
+  if (index === -1) throw new Error("Employee not found");
+  const employeeToUpdate = employees[index];
+  const newEmployeeData = { ...employeeToUpdate, ...updatedEmployee };
+  employees[index] = newEmployeeData;
+  localStorage.setItem('employees', JSON.stringify(employees));
+  return newEmployeeData;
+}
+
+async function deleteEmployee(employeeId: string): Promise<{ id: string }> {
+    const employees = await fetchEmployees();
+    const updatedEmployees = employees.filter(e => e.id !== employeeId);
+    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+    return { id: employeeId };
+}
 
 
 export default function EmployeesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const dataConnect = getDataConnect();
 
     const { data: employees, isLoading } = useQuery({
       queryKey: ['employees'],
-      queryFn: () => ListEmployees(dataConnect, {}),
+      queryFn: fetchEmployees,
     });
 
-    const { mutate: createEmployee } = useMutation({
-        mutationFn: (args: { employees: Omit<Employee, 'id'>[] }) => CreateEmployees(dataConnect, { values: args.employees.map(e => ({...e, id: `emp-${Date.now()}`})) }),
-        onSuccess: () => {
+    const createMutation = useMutation({
+        mutationFn: createEmployee,
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast({
+                title: "Empleado Añadido",
+                description: `Se ha añadido a ${data.name} a la lista de personal.`,
+            });
+            setIsAddDialogOpen(false);
         },
     });
 
-    const { mutate: updateEmployee } = useMutation({
-        mutationFn: (args: { employees: (Partial<Employee> & { id: string })[] }) => UpdateEmployees(dataConnect, { values: args.employees }),
-        onSuccess: () => {
+    const updateMutation = useMutation({
+        mutationFn: updateEmployee,
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast({
+                title: "Empleado Actualizado",
+                description: `Se ha actualizado la información de ${data.name}.`,
+            });
+            setEditingEmployee(null);
         },
     });
 
-    const { mutate: deleteEmployee } = useMutation({
-        mutationFn: (args: { employees: { id: string }[] }) => DeleteEmployees(dataConnect, { values: args.employees }),
-        onSuccess: () => {
+    const deleteMutation = useMutation({
+        mutationFn: deleteEmployee,
+        onSuccess: (data) => {
+            const employeeName = employees?.find(e => e.id === data.id)?.name || 'El empleado';
             queryClient.invalidateQueries({ queryKey: ['employees'] });
+            toast({
+                title: "Empleado Eliminado",
+                description: `Se ha eliminado a ${employeeName} de la lista de personal.`
+            });
         },
     });
 
@@ -95,12 +141,7 @@ export default function EmployeesPage() {
     const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
-        const employeeName = employees?.find(e => e.id === employeeId)?.name;
-        deleteEmployee({ employees: [{ id: employeeId }] });
-        toast({
-            title: "Empleado Eliminado",
-            description: `Se ha eliminado a ${employeeName} de la lista de personal.`
-        });
+        deleteMutation.mutate(employeeId);
     }
   
     const handleEdit = (employee: Employee) => {
@@ -109,22 +150,11 @@ export default function EmployeesPage() {
     
     const handleUpdateEmployee = (employeeData: Partial<Employee>) => {
         if (!editingEmployee) return;
-
-        updateEmployee({ employees: [{ ...employeeData, id: editingEmployee.id }] });
-        toast({
-            title: "Empleado Actualizado",
-            description: `Se ha actualizado la información de ${employeeData.name}.`,
-        });
-        setEditingEmployee(null);
+        updateMutation.mutate({ ...employeeData, id: editingEmployee.id });
     }
 
     const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
-        createEmployee({ employees: [newEmployeeData] });
-        toast({
-            title: "Empleado Añadido",
-            description: `Se ha añadido a ${newEmployeeData.name} a la lista de personal.`,
-        });
-        setIsAddDialogOpen(false);
+        createMutation.mutate(newEmployeeData);
     }
   
     return (

@@ -66,9 +66,9 @@ import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMo
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@/dataconnect/generated';
-import { getDataConnect } from '@/lib/dataconnect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { initialData } from '@/lib/data';
+
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -112,6 +112,44 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
   PermisoSS: 'bg-gray-200 text-gray-800 border border-gray-300',
 };
 
+
+// --- MOCK API FUNCTIONS ---
+async function fetchEmployees(): Promise<Employee[]> {
+  const data = localStorage.getItem('employees');
+  return data ? JSON.parse(data) : initialData.employees;
+}
+async function fetchWorkLocations(): Promise<WorkLocation[]> {
+  const data = localStorage.getItem('workLocations');
+  return data ? JSON.parse(data) : initialData.workLocations;
+}
+async function fetchLoanRequests(): Promise<LoanRequest[]> {
+  const data = localStorage.getItem('loanRequests');
+  return data ? JSON.parse(data) : initialData.loanRequests;
+}
+async function fetchAttendanceRecords(): Promise<AttendanceRecord[]> {
+    const data = localStorage.getItem('attendanceRecords');
+    return data ? JSON.parse(data) : initialData.attendanceRecords;
+}
+async function createOrUpdateAttendanceRecord(record: Partial<AttendanceRecord> & { employeeId: string; date: string; shift: 'day' | 'night' }): Promise<AttendanceRecord> {
+  const records = await fetchAttendanceRecords();
+  const index = records.findIndex(r => r.employeeId === record.employeeId && r.date === record.date && r.shift === record.shift);
+  
+  let newRecord: AttendanceRecord;
+  if (index > -1) {
+    // Update
+    const existingRecord = records[index];
+    newRecord = { ...existingRecord, ...record };
+    records[index] = newRecord;
+  } else {
+    // Create
+    newRecord = { id: `att-${Date.now()}-${Math.random()}`, ...record } as AttendanceRecord;
+    records.push(newRecord);
+  }
+  localStorage.setItem('attendanceRecords', JSON.stringify(records));
+  return newRecord;
+}
+
+
 export default function GuardianPayrollPage() {
   const { employee: currentUser, loading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -120,56 +158,47 @@ export default function GuardianPayrollPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   
   const queryClient = useQueryClient();
-  const dataConnect = getDataConnect();
 
   // --- Data Fetching ---
   const { data: employees, isLoading: employeesLoading } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => ListEmployees(dataConnect, {}),
+    queryFn: fetchEmployees,
   });
 
   const { data: workLocations, isLoading: locationsLoading } = useQuery({
     queryKey: ['workLocations'],
-    queryFn: () => ListWorkLocations(dataConnect, {}),
+    queryFn: fetchWorkLocations,
   });
   
   const { data: loans, isLoading: loansLoading } = useQuery({
     queryKey: ['loans', 'Aprobado'],
-    queryFn: () => ListLoanRequests(dataConnect, { where: { status: { eq: 'Aprobado' } } }),
+    queryFn: async () => {
+      const allLoans = await fetchLoanRequests();
+      return allLoans.filter(l => l.status === 'Aprobado');
+    },
   });
   
   const { data: attendanceRecords, isLoading: attendanceLoading } = useQuery({
-    queryKey: ['attendance', format(currentDate, 'yyyy')],
-    queryFn: () => ListAttendanceRecords(dataConnect, {
-        where: {
-          date: { 
-            gte: format(startOfYear(currentDate), 'yyyy-MM-dd'),
-            lte: format(endOfYear(currentDate), 'yyyy-MM-dd')
-          }
-        }
-    }),
+    queryKey: ['attendance', format(currentDate, 'yyyy-MM')],
+    queryFn: fetchAttendanceRecords
   });
 
-  const { mutate: createAttendance } = useMutation({
-      mutationFn: (args: { records: (Omit<AttendanceRecord, 'id'>)[] }) => CreateAttendanceRecords(dataConnect, { values: args.records.map(r => ({...r, id: `att-${Date.now()}-${Math.random()}`})) }),
+  const attendanceMutation = useMutation({
+      mutationFn: createOrUpdateAttendanceRecord,
       onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['attendance', format(currentDate, 'yyyy')] });
+          queryClient.invalidateQueries({ queryKey: ['attendance', format(currentDate, 'yyyy-MM')] });
           queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
-      },
-  });
-
-  const { mutate: updateAttendance } = useMutation({
-      mutationFn: (args: { records: (Partial<AttendanceRecord> & { id: string })[] }) => UpdateAttendanceRecords(dataConnect, { values: args.records }),
-      onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['attendance', format(currentDate, 'yyyy')] });
-          queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+          toast({ title: 'Asistencia Actualizada', description: `Se guardó el registro.` });
+          setDialogOpen(false);
+          setSelectedCell(null);
       },
   });
   
   // --- Derived State ---
   const attendanceMap = React.useMemo(() => {
     const map: Record<string, AttendanceRecord> = {};
-    attendanceRecords?.forEach(record => {
+    if (!attendanceRecords) return map;
+    attendanceRecords.forEach(record => {
       const key = `${record.employeeId}-${record.date}-${record.shift}`;
       map[key] = record;
     });
@@ -198,8 +227,12 @@ export default function GuardianPayrollPage() {
     const now = new Date();
     
     const currentMonthRecords = attendanceRecords.filter(r => {
-        const recordDate = parseISO(r.date);
-        return getYear(recordDate) === getYear(now) && getMonth(recordDate) === getMonth(now);
+        try {
+            const recordDate = parseISO(r.date);
+            return getYear(recordDate) === getYear(now) && getMonth(recordDate) === getMonth(now);
+        } catch {
+            return false;
+        }
     });
 
     const totalAttendance = currentMonthRecords.filter(r => r.status === 'Asistencia').length;
@@ -236,18 +269,7 @@ export default function GuardianPayrollPage() {
   const changeMonth = (amount: number) => {
     const newDate = amount > 0 ? add(currentDate, { months: 1 }) : sub(currentDate, { months: 1 });
     setCurrentDate(newDate);
-    // This will trigger a re-fetch of attendance data for the new year if it changes
-    queryClient.prefetchQuery({
-        queryKey: ['attendance', format(newDate, 'yyyy')],
-        queryFn: () => ListAttendanceRecords(dataConnect, {
-            where: {
-              date: { 
-                gte: format(startOfYear(newDate), 'yyyy-MM-dd'),
-                lte: format(endOfYear(newDate), 'yyyy-MM-dd')
-              }
-            }
-        }),
-    });
+    queryClient.invalidateQueries({ queryKey: ['attendance', format(newDate, 'yyyy-MM')] });
   };
 
   const daysInPeriod = React.useMemo(() => {
@@ -267,20 +289,8 @@ export default function GuardianPayrollPage() {
     if (!selectedCell) return;
     const { employee, day, shift } = selectedCell;
     const date = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), day), 'yyyy-MM-dd');
-    const key = `${employee.id}-${date}-${shift}`;
-    const existingRecord = attendanceMap[key];
-
-    const recordPayload = { ...formData, employeeId: employee.id, date, shift };
-
-    if (existingRecord) {
-        updateAttendance({ records: [{ id: existingRecord.id, ...recordPayload }] });
-    } else {
-        createAttendance({ records: [recordPayload] });
-    }
-
-    toast({ title: 'Asistencia Actualizada', description: `Se guardó el registro para ${employee.name}.` });
-    setDialogOpen(false);
-    setSelectedCell(null);
+    
+    attendanceMutation.mutate({ ...formData, employeeId: employee.id, date, shift });
   };
   
   const getRecordForCell = (employeeId: string, day: number, shift: 'day' | 'night') => {
@@ -291,7 +301,7 @@ export default function GuardianPayrollPage() {
   
   const handleExportIndividualPDF = (employeeId: string) => {
     const employee = employees?.find(e => e.id === employeeId);
-    if (!employee) return;
+    if (!employee || !attendanceRecords) return;
 
     toast({
         title: 'Exportando PDF...',

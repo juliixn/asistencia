@@ -25,17 +25,30 @@ import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calcul
 import { format, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import type { Employee, PayrollPeriod, PayrollDetail } from '@/lib/types';
+import type { Employee, PayrollPeriod, PayrollDetail, LoanRequest, AttendanceRecord } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@/dataconnect/generated';
-import { getDataConnect } from '@/lib/dataconnect';
 import { useQuery } from '@tanstack/react-query';
+import { initialData } from '@/lib/data';
 
 
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
+}
+
+// --- MOCK API FUNCTIONS ---
+async function fetchEmployees(): Promise<Employee[]> {
+  const data = localStorage.getItem('employees');
+  return data ? JSON.parse(data) : initialData.employees;
+}
+async function fetchLoanRequests(): Promise<LoanRequest[]> {
+  const data = localStorage.getItem('loanRequests');
+  return data ? JSON.parse(data) : initialData.loanRequests;
+}
+async function fetchAttendanceRecords(): Promise<AttendanceRecord[]> {
+    const data = localStorage.getItem('attendanceRecords');
+    return data ? JSON.parse(data) : initialData.attendanceRecords;
 }
 
 export default function PayrollPage() {
@@ -55,7 +68,6 @@ export default function PayrollPage() {
   });
 
   const canAccessPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
-  const dataConnect = getDataConnect();
 
   const startDay = period === '1-15' ? 1 : 16;
   const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);
@@ -64,19 +76,27 @@ export default function PayrollPage() {
 
   const { data: employees } = useQuery({
       queryKey: ['employees'],
-      queryFn: () => ListEmployees(dataConnect, {}),
+      queryFn: fetchEmployees,
       enabled: canAccessPayroll,
   });
-  const { data: attendanceData } = useQuery({
-      queryKey: ['attendance', period, format(currentDate, 'yyyy-MM')],
-      queryFn: () => ListAttendanceRecords(dataConnect, { where: { date: { gte: startDate, lte: endDate } } }),
+  const { data: allAttendance } = useQuery({
+      queryKey: ['attendance'],
+      queryFn: fetchAttendanceRecords,
       enabled: canAccessPayroll,
   });
   const { data: loanData } = useQuery({
       queryKey: ['loans', 'Aprobado'],
-      queryFn: () => ListLoanRequests(dataConnect, { where: { status: { eq: 'Aprobado' } } }),
+      queryFn: async () => {
+          const allLoans = await fetchLoanRequests();
+          return allLoans.filter(l => l.status === 'Aprobado');
+      },
       enabled: canAccessPayroll,
   });
+  
+  const attendanceData = React.useMemo(() => {
+    if (!allAttendance) return [];
+    return allAttendance.filter(a => a.date >= startDate && a.date <= endDate);
+  }, [allAttendance, startDate, endDate]);
 
   const handleCalculatePayroll = () => {
     setIsCalculating(true);
