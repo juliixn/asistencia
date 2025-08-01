@@ -1,16 +1,7 @@
 
 'use client';
 
-import { 
-    FirebaseDataConnect, 
-    getFirebaseDataConnect,
-} from 'firebase/app-check';
+// This file is no longer used and is kept to avoid breaking the build.
+export {}
 
-let dataConnect: FirebaseDataConnect | null = null;
-
-export function getDataConnect() {
-    if (!dataConnect) {
-        dataConnect = getFirebaseDataConnect('default-connector');
-    }
-    return dataConnect;
-}
+    
