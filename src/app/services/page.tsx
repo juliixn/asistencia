@@ -128,7 +128,7 @@ export default function ServicesPage() {
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
     const { employee: currentUser } = useAuth();
 
-    const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+    const canManageServices = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
     
     const handleDelete = (serviceId: string) => {
         deleteMutation.mutate(serviceId);

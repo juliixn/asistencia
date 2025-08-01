@@ -401,8 +401,8 @@ export default function GuardianPayrollPage() {
     doc.save(`recibo_nomina_${employee.name.replace(/ /g, '_')}_${periodText.replace(/ /g, '_')}.pdf`);
   }
   
-  const canEditAttendance = currentUser?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
-  const canExportPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+  const canEditAttendance = currentUser?.role && ['Supervisor de Seguridad', 'Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
+  const canExportPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
   const isLoading = authLoading || employeesLoading || locationsLoading || loansLoading || attendanceLoading;
 

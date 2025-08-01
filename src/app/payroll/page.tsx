@@ -67,7 +67,7 @@ export default function PayrollPage() {
     totalBonuses: 0,
   });
 
-  const canAccessPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+  const canAccessPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
   const startDay = period === '1-15' ? 1 : 16;
   const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);

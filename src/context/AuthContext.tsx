@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             id: 'temp-admin',
             name: 'Administrador (Fallback)',
             email: DIRECTOR_EMAIL_FOR_DEMO,
-            role: 'Dirección',
+            role: 'Director de Seguridad',
             shiftRate: 1200
         });
       }

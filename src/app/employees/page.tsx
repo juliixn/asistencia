@@ -138,7 +138,7 @@ export default function EmployeesPage() {
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     const { employee: currentUser } = useAuth();
     
-    const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+    const canManageEmployees = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
         deleteMutation.mutate(employeeId);
@@ -316,10 +316,9 @@ function EmployeeDialog({
                                 <SelectValue placeholder="Seleccionar rol" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Guardia">Guardia</SelectItem>
-                                <SelectItem value="Supervisor">Supervisor</SelectItem>
-                                <SelectItem value="Coordinador">Coordinador</SelectItem>
-                                <SelectItem value="Dirección">Dirección</SelectItem>
+                                <SelectItem value="Supervisor de Seguridad">Supervisor de Seguridad</SelectItem>
+                                <SelectItem value="Coordinador de Seguridad">Coordinador de Seguridad</SelectItem>
+                                <SelectItem value="Director de Seguridad">Director de Seguridad</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

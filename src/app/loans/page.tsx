@@ -161,8 +161,8 @@ export default function LoansPage() {
       });
   };
 
-  const canCreateRequest = currentUser?.role && ['Supervisor', 'Coordinador', 'Dirección'].includes(currentUser.role);
-  const canApproveRequest = currentUser?.role === 'Dirección';
+  const canCreateRequest = currentUser?.role && ['Supervisor de Seguridad', 'Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
+  const canApproveRequest = currentUser?.role === 'Director de Seguridad';
 
   const isLoading = loansLoading || employeesLoading;
 

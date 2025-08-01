@@ -1,5 +1,5 @@
 
-export type EmployeeRole = "Guardia" | "Supervisor" | "Coordinador" | "Dirección";
+export type EmployeeRole = "Supervisor de Seguridad" | "Coordinador de Seguridad" | "Director de Seguridad";
 
 export interface Employee {
   id: string;
