@@ -4,7 +4,7 @@ import type {
     WorkLocations,
     LoanRequests,
     AttendanceRecords
-} from '@/dataconnect/types';
+} from '@/dataconnect/generated';
 
 export type EmployeeRole = "Guardia" | "Supervisor" | "Coordinador" | "Dirección";
 
@@ -22,8 +22,8 @@ export type AttendanceStatus =
   | "Incapacidad"
   | "Vacaciones"
   | "Enfermedad"
-  | "Permiso C/S" // Con Sueldo
-  | "Permiso S/S"; // Sin Sueldo
+  | "PermisoCS" // Con Sueldo
+  | "PermisoSS"; // Sin Sueldo
 
 export type PayrollPeriod = "1-15" | "16-end";
 
@@ -41,3 +41,15 @@ export interface PayrollBonus {
 
 export type LoanStatus = "Pendiente" | "Aprobado" | "Rechazado" | "Pagado";
 export type LoanTerm = "única" | "quincenal";
+
+export interface PayrollDetail {
+    employeeId: string;
+    employeeName: string;
+    shiftsWorked: number;
+    lateArrivals: number;
+    basePay: number;
+    loanDeductions: number;
+    penalties: number;
+    bonuses: number;
+    netPay: number;
+}

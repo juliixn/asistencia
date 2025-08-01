@@ -66,7 +66,9 @@ import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMo
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@/dataconnect/hooks';
+import { ListEmployees, ListWorkLocations, ListAttendanceRecords, CreateAttendanceRecords, UpdateAttendanceRecords, ListLoanRequests } from '@/dataconnect/generated';
+import { getDataConnect } from '@/lib/dataconnect';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -116,23 +118,53 @@ export default function GuardianPayrollPage() {
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  
+  const queryClient = useQueryClient();
+  const dataConnect = getDataConnect();
 
   // --- Data Fetching ---
-  const { data: employees, isLoading: employeesLoading } = ListEmployees();
-  const { data: workLocations, isLoading: locationsLoading } = ListWorkLocations();
-  const { data: loans, isLoading: loansLoading } = ListLoanRequests({ where: { status: { eq: 'Aprobado' } } });
-  
-  const { data: attendanceRecords, isLoading: attendanceLoading } = ListAttendanceRecords({
-      where: {
-        date: { 
-          gte: format(startOfYear(currentDate), 'yyyy-MM-dd'),
-          lte: format(endOfYear(currentDate), 'yyyy-MM-dd')
-        }
-      }
+  const { data: employees, isLoading: employeesLoading } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => ListEmployees(dataConnect, {}),
   });
 
-  const { mutate: createAttendance } = CreateAttendanceRecords();
-  const { mutate: updateAttendance } = UpdateAttendanceRecords();
+  const { data: workLocations, isLoading: locationsLoading } = useQuery({
+    queryKey: ['workLocations'],
+    queryFn: () => ListWorkLocations(dataConnect, {}),
+  });
+  
+  const { data: loans, isLoading: loansLoading } = useQuery({
+    queryKey: ['loans', 'Aprobado'],
+    queryFn: () => ListLoanRequests(dataConnect, { where: { status: { eq: 'Aprobado' } } }),
+  });
+  
+  const { data: attendanceRecords, isLoading: attendanceLoading } = useQuery({
+    queryKey: ['attendance', format(currentDate, 'yyyy')],
+    queryFn: () => ListAttendanceRecords(dataConnect, {
+        where: {
+          date: { 
+            gte: format(startOfYear(currentDate), 'yyyy-MM-dd'),
+            lte: format(endOfYear(currentDate), 'yyyy-MM-dd')
+          }
+        }
+    }),
+  });
+
+  const { mutate: createAttendance } = useMutation({
+      mutationFn: (args: { records: (Omit<AttendanceRecord, 'id'>)[] }) => CreateAttendanceRecords(dataConnect, { values: args.records.map(r => ({...r, id: `att-${Date.now()}-${Math.random()}`})) }),
+      onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['attendance', format(currentDate, 'yyyy')] });
+          queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      },
+  });
+
+  const { mutate: updateAttendance } = useMutation({
+      mutationFn: (args: { records: (Partial<AttendanceRecord> & { id: string })[] }) => UpdateAttendanceRecords(dataConnect, { values: args.records }),
+      onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['attendance', format(currentDate, 'yyyy')] });
+          queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      },
+  });
   
   // --- Derived State ---
   const attendanceMap = React.useMemo(() => {
@@ -202,7 +234,20 @@ export default function GuardianPayrollPage() {
   };
 
   const changeMonth = (amount: number) => {
-    setCurrentDate((prev) => (amount > 0 ? add(prev, { months: 1 }) : sub(prev, { months: 1 })));
+    const newDate = amount > 0 ? add(currentDate, { months: 1 }) : sub(currentDate, { months: 1 });
+    setCurrentDate(newDate);
+    // This will trigger a re-fetch of attendance data for the new year if it changes
+    queryClient.prefetchQuery({
+        queryKey: ['attendance', format(newDate, 'yyyy')],
+        queryFn: () => ListAttendanceRecords(dataConnect, {
+            where: {
+              date: { 
+                gte: format(startOfYear(newDate), 'yyyy-MM-dd'),
+                lte: format(endOfYear(newDate), 'yyyy-MM-dd')
+              }
+            }
+        }),
+    });
   };
 
   const daysInPeriod = React.useMemo(() => {
@@ -228,9 +273,9 @@ export default function GuardianPayrollPage() {
     const recordPayload = { ...formData, employeeId: employee.id, date, shift };
 
     if (existingRecord) {
-        updateAttendance([{ id: existingRecord.id, ...recordPayload }]);
+        updateAttendance({ records: [{ id: existingRecord.id, ...recordPayload }] });
     } else {
-        createAttendance([{ id: `att-${Date.now()}`, ...recordPayload }]);
+        createAttendance({ records: [recordPayload] });
     }
 
     toast({ title: 'Asistencia Actualizada', description: `Se guardó el registro para ${employee.name}.` });
@@ -592,9 +637,9 @@ function UpdateAttendanceDialog({
 
     onUpdate({
       status,
-      locationId,
-      notes,
-      photoEvidence,
+      locationId: locationId || null,
+      notes: notes || null,
+      photoEvidence: photoEvidence || null,
     });
   };
 
@@ -629,7 +674,7 @@ function UpdateAttendanceDialog({
             {needsLocation && (
               <div className="space-y-2">
                 <Label htmlFor="location">Servicio / Centro de Trabajo</Label>
-                <Select value={locationId} onValueChange={setLocationId}>
+                <Select value={locationId || ''} onValueChange={setLocationId}>
                   <SelectTrigger id="location">
                     <SelectValue placeholder="Seleccionar servicio" />
                   </SelectTrigger>
@@ -655,7 +700,7 @@ function UpdateAttendanceDialog({
             )}
              <div className="space-y-2">
                 <Label htmlFor="notes">Notas Adicionales</Label>
-                <Textarea id="notes" placeholder="Anotar detalles como turnos dobles, adelantos, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea id="notes" placeholder="Anotar detalles como turnos dobles, adelantos, etc." value={notes || ''} onChange={(e) => setNotes(e.target.value)} />
              </div>
           </div>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">

@@ -57,7 +57,9 @@ import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, Thumbs
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
-import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@/dataconnect/hooks';
+import { ListLoanRequests, ListEmployees, CreateLoanRequests, UpdateLoanRequests } from '@/dataconnect/generated';
+import { getDataConnect } from '@/lib/dataconnect';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {
@@ -69,25 +71,52 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 
 export default function LoansPage() {
-  const { data: loans, isLoading: loansLoading } = ListLoanRequests();
-  const { data: employees, isLoading: employeesLoading } = ListEmployees();
+  const queryClient = useQueryClient();
+  const dataConnect = getDataConnect();
+
+  const { data: loans, isLoading: loansLoading } = useQuery({
+    queryKey: ['loans'],
+    queryFn: () => ListLoanRequests(dataConnect, {}),
+  });
+
+  const { data: employees, isLoading: employeesLoading } = useQuery({
+    queryKey: ['employees'],
+    queryFn: () => ListEmployees(dataConnect, {}),
+  });
+
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
   const { toast } = useToast();
   const { employee: currentUser } = useAuth();
 
-  const { mutate: createLoanRequest } = CreateLoanRequests();
-  const { mutate: updateLoanRequest } = UpdateLoanRequests();
+  const { mutate: createLoanRequest } = useMutation({
+    mutationFn: (newRequest: Omit<LoanRequest, 'id'>) => CreateLoanRequests(dataConnect, { values: [{...newRequest, id: `loan${Date.now()}`}] }),
+    onSuccess: (data, variables) => {
+        const employeeName = employees?.find(e => e.id === variables.employeeId)?.name;
+        toast({
+            title: "Solicitud Creada",
+            description: `La solicitud de préstamo para ${employeeName} ha sido creada.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ['loans'] });
+        setIsRequestDialogOpen(false);
+    }
+  });
+
+  const { mutate: updateLoanRequest } = useMutation({
+    mutationFn: (args: Partial<LoanRequest> & { id: string }) => UpdateLoanRequests(dataConnect, { values: [args] }),
+    onSuccess: (data, variables) => {
+      const loan = loans?.find(l => l.id === variables.id);
+      if (!loan) return;
+      const employee = employees?.find(e => e.id === loan.employeeId);
+      toast({
+        title: `Préstamo ${variables.status}`,
+        description: `La solicitud de ${employee?.name} ha sido actualizada.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+    }
+  });
 
   const handleCreateRequest = (newRequest: Omit<LoanRequest, 'id'>) => {
-    createLoanRequest([{
-        ...newRequest,
-        id: `loan${Date.now()}`,
-    }]);
-    toast({
-        title: "Solicitud Creada",
-        description: `La solicitud de préstamo para ${employees?.find(e => e.id === newRequest.employeeId)?.name} ha sido creada.`,
-    })
-    setIsRequestDialogOpen(false);
+    createLoanRequest(newRequest);
   }
 
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
@@ -95,18 +124,12 @@ export default function LoansPage() {
 
       const loan = loans?.find(l => l.id === loanId);
       if (!loan) return;
-
-      const employee = employees?.find(e => e.id === loan.employeeId);
-      updateLoanRequest([{
+      
+      updateLoanRequest({
         id: loanId,
         status: newStatus,
         approvedById: currentUser.id,
         approvalDate: new Date().toISOString().split('T')[0],
-      }]);
-      
-      toast({
-        title: `Préstamo ${newStatus}`,
-        description: `La solicitud de ${employee?.name} ha sido actualizada.`,
       });
   };
 
@@ -335,6 +358,9 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             reason,
             requestDate: new Date().toISOString().split('T')[0],
             signature: signatureDataUrl,
+            status: 'Pendiente',
+            approvalDate: null,
+            approvedById: null,
         });
 
     } catch(error) {

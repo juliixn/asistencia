@@ -1,3 +1,1 @@
-// This is a bridge file to re-export Data Connect functions.
-// This approach helps prevent module resolution issues in some environments.
-export * from './generated/index.js';
+// This file is no longer used and will be removed.

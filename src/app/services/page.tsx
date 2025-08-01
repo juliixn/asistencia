@@ -44,28 +44,64 @@ import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@/dataconnect/hooks';
+import { ListWorkLocations, CreateWorkLocations, UpdateWorkLocations, DeleteWorkLocations } from '@/dataconnect/generated';
+import { getDataConnect } from '@/lib/dataconnect';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function ServicesPage() {
     const { toast } = useToast();
-    const { data: services, isLoading } = ListWorkLocations();
+    const queryClient = useQueryClient();
+    const dataConnect = getDataConnect();
+    
+    const { data: services, isLoading } = useQuery({
+        queryKey: ['workLocations'],
+        queryFn: () => ListWorkLocations(dataConnect, {}),
+    });
+
+    const { mutate: createService } = useMutation({
+        mutationFn: (newServiceData: Omit<WorkLocation, 'id'>) => CreateWorkLocations(dataConnect, { values: [{ ...newServiceData, id: `loc-${Date.now()}` }] }),
+        onSuccess: (data, variables) => {
+            toast({
+                title: "Servicio Añadido",
+                description: `Se ha añadido "${variables.name}" a la lista de servicios.`,
+            });
+            queryClient.invalidateQueries({ queryKey: ['workLocations'] });
+            setIsAddDialogOpen(false);
+        }
+    });
+
+    const { mutate: updateService } = useMutation({
+        mutationFn: (updatedServiceData: WorkLocation) => UpdateWorkLocations(dataConnect, { values: [updatedServiceData] }),
+        onSuccess: (data, variables) => {
+            toast({
+                title: "Servicio Actualizado",
+                description: `Se ha actualizado la información de "${variables.name}".`,
+            });
+            queryClient.invalidateQueries({ queryKey: ['workLocations'] });
+            setEditingService(null);
+        }
+    });
+
+    const { mutate: deleteService } = useMutation({
+        mutationFn: (serviceId: string) => DeleteWorkLocations(dataConnect, { values: [{ id: serviceId }] }),
+        onSuccess: (data, variables) => {
+            const serviceName = services?.find(s => s.id === variables)?.name;
+            toast({
+                title: "Servicio Eliminado",
+                description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
+            });
+            queryClient.invalidateQueries({ queryKey: ['workLocations'] });
+        }
+    });
+    
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
     const { employee: currentUser } = useAuth();
-    
-    const { mutate: createService } = CreateWorkLocations();
-    const { mutate: updateService } = UpdateWorkLocations();
-    const { mutate: deleteService } = DeleteWorkLocations();
 
     const canManageServices = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
     
     const handleDelete = (serviceId: string) => {
-        const serviceName = services?.find(s => s.id === serviceId)?.name;
-        deleteService([{ id: serviceId }]);
-        toast({
-            title: "Servicio Eliminado",
-            description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
-        });
+        deleteService(serviceId);
     }
   
     const handleEdit = (service: WorkLocation) => {
@@ -74,24 +110,11 @@ export default function ServicesPage() {
     
     const handleUpdateService = (updatedServiceData: Omit<WorkLocation, 'id'>) => {
         if (!editingService) return;
-        updateService([{ ...updatedServiceData, id: editingService.id }]);
-        toast({
-            title: "Servicio Actualizado",
-            description: `Se ha actualizado la información de "${updatedServiceData.name}".`,
-        });
-        setEditingService(null);
+        updateService({ ...updatedServiceData, id: editingService.id });
     }
 
     const handleAddService = (newServiceData: Omit<WorkLocation, 'id'>) => {
-        createService([{
-            ...newServiceData,
-            id: `loc-${Date.now()}`
-        }]);
-        toast({
-            title: "Servicio Añadido",
-            description: `Se ha añadido "${newServiceData.name}" a la lista de servicios.`,
-        });
-        setIsAddDialogOpen(false);
+        createService(newServiceData);
     }
 
   return (

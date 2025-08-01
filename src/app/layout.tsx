@@ -7,6 +7,9 @@ import { BottomNavbar } from '@/components/bottom-navbar';
 import { AuthProvider } from '@/context/AuthContext';
 import React from 'react';
 import { Sidebar } from '@/components/sidebar';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
@@ -38,9 +41,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
-            <AppContent>{children}</AppContent>
-        </AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+              <AppContent>{children}</AppContent>
+          </AuthProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );

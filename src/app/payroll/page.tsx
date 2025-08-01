@@ -25,27 +25,17 @@ import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calcul
 import { format, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import type { AttendanceRecord, LoanRequest, Employee, PayrollPeriod } from '@/lib/types';
+import type { Employee, PayrollPeriod, PayrollDetail } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@/dataconnect/hooks';
+import { ListEmployees, ListAttendanceRecords, ListLoanRequests } from '@/dataconnect/generated';
+import { getDataConnect } from '@/lib/dataconnect';
+import { useQuery } from '@tanstack/react-query';
 
 
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
-}
-
-interface PayrollDetail {
-    employeeId: string;
-    employeeName: string;
-    shiftsWorked: number;
-    lateArrivals: number;
-    basePay: number;
-    loanDeductions: number;
-    penalties: number;
-    bonuses: number;
-    netPay: number;
 }
 
 export default function PayrollPage() {
@@ -65,15 +55,28 @@ export default function PayrollPage() {
   });
 
   const canAccessPayroll = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
+  const dataConnect = getDataConnect();
 
   const startDay = period === '1-15' ? 1 : 16;
   const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);
   const startDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), startDay), 'yyyy-MM-dd');
   const endDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), endDay), 'yyyy-MM-dd');
 
-  const { data: employees } = ListEmployees();
-  const { data: attendanceData } = ListAttendanceRecords({ where: { date: { gte: startDate, lte: endDate } } });
-  const { data: loanData } = ListLoanRequests({ where: { status: { eq: 'Aprobado' } } });
+  const { data: employees } = useQuery({
+      queryKey: ['employees'],
+      queryFn: () => ListEmployees(dataConnect, {}),
+      enabled: canAccessPayroll,
+  });
+  const { data: attendanceData } = useQuery({
+      queryKey: ['attendance', period, format(currentDate, 'yyyy-MM')],
+      queryFn: () => ListAttendanceRecords(dataConnect, { where: { date: { gte: startDate, lte: endDate } } }),
+      enabled: canAccessPayroll,
+  });
+  const { data: loanData } = useQuery({
+      queryKey: ['loans', 'Aprobado'],
+      queryFn: () => ListLoanRequests(dataConnect, { where: { status: { eq: 'Aprobado' } } }),
+      enabled: canAccessPayroll,
+  });
 
   const handleCalculatePayroll = () => {
     setIsCalculating(true);

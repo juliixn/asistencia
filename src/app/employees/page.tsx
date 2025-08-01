@@ -52,24 +52,51 @@ import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@/dataconnect/hooks';
+import { ListEmployees, CreateEmployees, UpdateEmployees, DeleteEmployees } from '@/dataconnect/generated';
+import { getDataConnect } from '@/lib/dataconnect';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 
 export default function EmployeesPage() {
     const { toast } = useToast();
-    const { data: employees, isLoading } = ListEmployees();
+    const queryClient = useQueryClient();
+    const dataConnect = getDataConnect();
+
+    const { data: employees, isLoading } = useQuery({
+      queryKey: ['employees'],
+      queryFn: () => ListEmployees(dataConnect, {}),
+    });
+
+    const { mutate: createEmployee } = useMutation({
+        mutationFn: (args: { employees: Omit<Employee, 'id'>[] }) => CreateEmployees(dataConnect, { values: args.employees.map(e => ({...e, id: `emp-${Date.now()}`})) }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+        },
+    });
+
+    const { mutate: updateEmployee } = useMutation({
+        mutationFn: (args: { employees: Partial<Employee> & { id: string }[] }) => UpdateEmployees(dataConnect, { values: args.employees }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+        },
+    });
+
+    const { mutate: deleteEmployee } = useMutation({
+        mutationFn: (args: { employees: { id: string }[] }) => DeleteEmployees(dataConnect, { values: args.employees }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['employees'] });
+        },
+    });
+
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     const { employee: currentUser } = useAuth();
     
-    const { mutate: createEmployee } = CreateEmployees();
-    const { mutate: updateEmployee } = UpdateEmployees();
-    const { mutate: deleteEmployee } = DeleteEmployees();
-
     const canManageEmployees = currentUser?.role && ['Coordinador', 'Dirección'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
         const employeeName = employees?.find(e => e.id === employeeId)?.name;
-        deleteEmployee([{ id: employeeId }]);
+        deleteEmployee({ employees: [{ id: employeeId }] });
         toast({
             title: "Empleado Eliminado",
             description: `Se ha eliminado a ${employeeName} de la lista de personal.`
@@ -83,7 +110,7 @@ export default function EmployeesPage() {
     const handleUpdateEmployee = (employeeData: Partial<Employee>) => {
         if (!editingEmployee) return;
 
-        updateEmployee([{ ...employeeData, id: editingEmployee.id }]);
+        updateEmployee({ employees: [{ ...employeeData, id: editingEmployee.id }] });
         toast({
             title: "Empleado Actualizado",
             description: `Se ha actualizado la información de ${employeeData.name}.`,
@@ -92,10 +119,7 @@ export default function EmployeesPage() {
     }
 
     const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
-        createEmployee([{
-            ...newEmployeeData,
-            id: `emp-${Date.now()}`,
-        }]);
+        createEmployee({ employees: [newEmployeeData] });
         toast({
             title: "Empleado Añadido",
             description: `Se ha añadido a ${newEmployeeData.name} a la lista de personal.`,
