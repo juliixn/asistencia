@@ -26,13 +26,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { data: directorQuery, isLoading: isEmployeeLoading } = useQuery({
-    queryKey: ['directorEmployee'],
-    queryFn: findDirector,
-  });
-
+  // Initialize local storage with mock data if it's empty
+  // This is a one-time setup for the demo environment
   useEffect(() => {
-    // Initialize local storage if it's empty
     if (!localStorage.getItem('employees')) {
         localStorage.setItem('employees', JSON.stringify(initialData.employees));
     }
@@ -47,20 +43,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // For this demo, we'll "log in" as the director by default.
+  // We fetch the director's data from localStorage to simulate a user session.
+  const { data: directorQuery, isLoading: isEmployeeLoading } = useQuery({
+    queryKey: ['directorEmployee'],
+    queryFn: findDirector,
+  });
+
   useEffect(() => {
     if (!isEmployeeLoading) {
       if (directorQuery && directorQuery.length > 0) {
         setEmployee(directorQuery[0]);
       } else {
-        console.warn(`Director with email ${DIRECTOR_EMAIL_FOR_DEMO} not found, using fallback.`);
+        // Fallback in case the director is not found in localStorage
         const fallbackDirector = initialData.employees.find(e => e.email === DIRECTOR_EMAIL_FOR_DEMO);
-        setEmployee(fallbackDirector || {
-            id: 'temp-admin',
-            name: 'Administrador (Fallback)',
-            email: DIRECTOR_EMAIL_FOR_DEMO,
-            role: 'Director de Seguridad',
-            shiftRate: 1200
-        });
+        setEmployee(fallbackDirector || null);
       }
       setLoading(false);
     }
@@ -82,5 +79,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

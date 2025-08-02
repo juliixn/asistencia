@@ -728,5 +728,3 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
-
-    

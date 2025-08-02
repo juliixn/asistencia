@@ -488,5 +488,3 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
     </DialogContent>
   )
 }
-
-    

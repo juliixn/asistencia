@@ -62,9 +62,11 @@ async function fetchEmployees(): Promise<Employee[]> {
   return data ? JSON.parse(data) : initialData.employees;
 }
 
-async function createEmployee(newEmployee: Omit<Employee, 'id'>): Promise<Employee> {
+async function createEmployee(newEmployee: Omit<Employee, 'id' | 'email'>): Promise<Employee> {
   const employees = await fetchEmployees();
-  const createdEmployee: Employee = { ...newEmployee, id: `emp-${Date.now()}`};
+  // Simplified email generation for demo purposes
+  const email = `${newEmployee.name.split(' ')[0].toLowerCase()}@test.com`;
+  const createdEmployee: Employee = { ...newEmployee, id: `emp-${Date.now()}`, email };
   const updatedEmployees = [...employees, createdEmployee];
   localStorage.setItem('employees', JSON.stringify(updatedEmployees));
   return createdEmployee;
@@ -153,7 +155,7 @@ export default function EmployeesPage() {
         updateMutation.mutate({ ...employeeData, id: editingEmployee.id });
     }
 
-    const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
+    const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id' | 'email'>) => {
         createMutation.mutate(newEmployeeData);
     }
   
@@ -269,7 +271,7 @@ function EmployeeDialog({
   employee,
   onClose,
 }: { 
-  onSave: (data: Omit<Employee, 'id'>) => void;
+  onSave: (data: Omit<Employee, 'id' | 'email'>) => void;
   employee?: Employee;
   onClose?: () => void;
 }) {
@@ -283,7 +285,7 @@ function EmployeeDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !role || shiftRate <= 0 || !email) {
+    if (!name || !role || shiftRate <= 0) {
         toast({
             variant: "destructive",
             title: "Campos Incompletos",
@@ -291,8 +293,14 @@ function EmployeeDialog({
         });
         return;
     }
-    // Type assertion is safe because we checked for `role` not being `''`
-    onSave({ name, role: role as EmployeeRole, shiftRate, email });
+    
+    // For editing, we pass the existing email. For creation, email is generated server-side.
+    const saveData: Omit<Employee, 'id'> = { name, role: role as EmployeeRole, shiftRate, email: employee?.email || '' };
+    if (!isEditing) {
+        delete (saveData as Partial<typeof saveData>).email;
+    }
+
+    onSave(saveData as any); // Type assertion based on isEditing logic
   }
 
   return (
@@ -329,7 +337,8 @@ function EmployeeDialog({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="email">Correo Electrónico</Label>
-                    <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ejemplo@correo.com" />
+                    <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ejemplo@correo.com" disabled={isEditing} />
+                    {!isEditing && <p className="text-xs text-muted-foreground">El correo se genera automáticamente al guardar.</p>}
                 </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
@@ -344,5 +353,3 @@ function EmployeeDialog({
     </DialogContent>
   )
 }
-
-    
