@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
+import { fetchAllEmployees } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
@@ -22,40 +22,11 @@ const AuthContext = createContext<AuthContextType>({
     logout: () => {},
 });
 
-// Helper to get all employees from localStorage
-async function fetchAllEmployees(): Promise<Employee[]> {
-    const data = localStorage.getItem('employees');
-    // Initialize with mock data if it's empty
-    if (!data) {
-        localStorage.setItem('employees', JSON.stringify(initialData.employees));
-        return initialData.employees;
-    }
-    return JSON.parse(data);
-}
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
-
-  // Initialize local storage with mock data if it's empty
-  useEffect(() => {
-    const initLocalStorage = () => {
-        if (!localStorage.getItem('employees')) {
-            localStorage.setItem('employees', JSON.stringify(initialData.employees));
-        }
-        if (!localStorage.getItem('workLocations')) {
-            localStorage.setItem('workLocations', JSON.stringify(initialData.workLocations));
-        }
-        if (!localStorage.getItem('loanRequests')) {
-            localStorage.setItem('loanRequests', JSON.stringify(initialData.loanRequests));
-        }
-        if (!localStorage.getItem('attendanceRecords')) {
-            localStorage.setItem('attendanceRecords', JSON.stringify(initialData.attendanceRecords));
-        }
-    };
-    initLocalStorage();
-  }, []);
 
   // Check for a logged-in user in session storage on initial load
   useEffect(() => {

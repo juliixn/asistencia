@@ -67,7 +67,7 @@ import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
+import { fetchEmployees, fetchWorkLocations, fetchLoanRequests, fetchAttendanceRecords, createOrUpdateAttendanceRecord } from '@/lib/api';
 
 
 declare module 'jspdf' {
@@ -111,44 +111,6 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
   PermisoCS: 'bg-cyan-200 text-cyan-800 border border-cyan-300',
   PermisoSS: 'bg-gray-200 text-gray-800 border border-gray-300',
 };
-
-
-// --- MOCK API FUNCTIONS ---
-async function fetchEmployees(): Promise<Employee[]> {
-  const data = localStorage.getItem('employees');
-  return data ? JSON.parse(data) : initialData.employees;
-}
-async function fetchWorkLocations(): Promise<WorkLocation[]> {
-  const data = localStorage.getItem('workLocations');
-  return data ? JSON.parse(data) : initialData.workLocations;
-}
-async function fetchLoanRequests(): Promise<LoanRequest[]> {
-  const data = localStorage.getItem('loanRequests');
-  return data ? JSON.parse(data) : initialData.loanRequests;
-}
-async function fetchAttendanceRecords(): Promise<AttendanceRecord[]> {
-    const data = localStorage.getItem('attendanceRecords');
-    return data ? JSON.parse(data) : initialData.attendanceRecords;
-}
-async function createOrUpdateAttendanceRecord(record: Partial<AttendanceRecord> & { employeeId: string; date: string; shift: 'day' | 'night' }): Promise<AttendanceRecord> {
-  const records = await fetchAttendanceRecords();
-  const index = records.findIndex(r => r.employeeId === record.employeeId && r.date === record.date && r.shift === record.shift);
-  
-  let newRecord: AttendanceRecord;
-  if (index > -1) {
-    // Update
-    const existingRecord = records[index];
-    newRecord = { ...existingRecord, ...record };
-    records[index] = newRecord;
-  } else {
-    // Create
-    newRecord = { id: `att-${Date.now()}-${Math.random()}`, ...record } as AttendanceRecord;
-    records.push(newRecord);
-  }
-  localStorage.setItem('attendanceRecords', JSON.stringify(records));
-  return newRecord;
-}
-
 
 export default function GuardianPayrollPage() {
   const { employee: currentUser, loading: authLoading } = useAuth();

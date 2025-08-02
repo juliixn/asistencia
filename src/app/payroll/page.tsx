@@ -28,27 +28,12 @@ import { useToast } from '@/hooks/use-toast';
 import type { Employee, PayrollPeriod, PayrollDetail, LoanRequest, AttendanceRecord } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
-
+import { fetchEmployees, fetchLoanRequests, fetchAttendanceRecords } from '@/lib/api';
 
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
-}
-
-// --- MOCK API FUNCTIONS ---
-async function fetchEmployees(): Promise<Employee[]> {
-  const data = localStorage.getItem('employees');
-  return data ? JSON.parse(data) : initialData.employees;
-}
-async function fetchLoanRequests(): Promise<LoanRequest[]> {
-  const data = localStorage.getItem('loanRequests');
-  return data ? JSON.parse(data) : initialData.loanRequests;
-}
-async function fetchAttendanceRecords(): Promise<AttendanceRecord[]> {
-    const data = localStorage.getItem('attendanceRecords');
-    return data ? JSON.parse(data) : initialData.attendanceRecords;
 }
 
 export default function PayrollPage() {

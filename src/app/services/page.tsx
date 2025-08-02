@@ -45,38 +45,7 @@ import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
-
-
-// --- MOCK API FUNCTIONS ---
-async function fetchWorkLocations(): Promise<WorkLocation[]> {
-  const data = localStorage.getItem('workLocations');
-  return data ? JSON.parse(data) : initialData.workLocations;
-}
-
-async function createWorkLocation(newService: Omit<WorkLocation, 'id'>): Promise<WorkLocation> {
-  const services = await fetchWorkLocations();
-  const createdService: WorkLocation = { ...newService, id: `loc-${Date.now()}`};
-  const updatedServices = [...services, createdService];
-  localStorage.setItem('workLocations', JSON.stringify(updatedServices));
-  return createdService;
-}
-
-async function updateWorkLocation(updatedService: WorkLocation): Promise<WorkLocation> {
-  const services = await fetchWorkLocations();
-  const index = services.findIndex(s => s.id === updatedService.id);
-  if (index === -1) throw new Error("Service not found");
-  services[index] = updatedService;
-  localStorage.setItem('workLocations', JSON.stringify(services));
-  return updatedService;
-}
-
-async function deleteWorkLocation(serviceId: string): Promise<{ id: string }> {
-    const services = await fetchWorkLocations();
-    const updatedServices = services.filter(s => s.id !== serviceId);
-    localStorage.setItem('workLocations', JSON.stringify(updatedServices));
-    return { id: serviceId };
-}
+import { fetchWorkLocations, createWorkLocation, updateWorkLocation, deleteWorkLocation } from '@/lib/api';
 
 
 export default function ServicesPage() {

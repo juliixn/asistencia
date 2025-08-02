@@ -58,7 +58,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
+import { fetchLoanRequests, fetchEmployees, createLoanRequest, updateLoanRequest } from '@/lib/api';
 
 const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType; className: string }> = {
   Pendiente: { label: 'Pendiente', icon: Clock, className: 'bg-yellow-100 text-yellow-800' },
@@ -66,38 +66,6 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
   Rechazado: { label: 'Rechazado', icon: XCircle, className: 'bg-red-100 text-red-800' },
   Pagado: { label: 'Pagado', icon: CheckCircle, className: 'bg-blue-100 text-blue-800' },
 };
-
-
-// --- MOCK API FUNCTIONS ---
-async function fetchLoanRequests(): Promise<LoanRequest[]> {
-  const data = localStorage.getItem('loanRequests');
-  return data ? JSON.parse(data) : initialData.loanRequests;
-}
-
-async function fetchEmployees(): Promise<Employee[]> {
-  const data = localStorage.getItem('employees');
-  return data ? JSON.parse(data) : initialData.employees;
-}
-
-async function createLoanRequest(newRequest: Omit<LoanRequest, 'id'>): Promise<LoanRequest> {
-  const loans = await fetchLoanRequests();
-  const createdLoan: LoanRequest = { ...newRequest, id: `loan-${Date.now()}`};
-  const updatedLoans = [...loans, createdLoan];
-  localStorage.setItem('loanRequests', JSON.stringify(updatedLoans));
-  return createdLoan;
-}
-
-async function updateLoanRequest(updatedLoan: Partial<LoanRequest> & { id: string }): Promise<LoanRequest> {
-  const loans = await fetchLoanRequests();
-  const index = loans.findIndex(l => l.id === updatedLoan.id);
-  if (index === -1) throw new Error("Loan not found");
-  const loanToUpdate = loans[index];
-  const newLoanData = { ...loanToUpdate, ...updatedLoan };
-  loans[index] = newLoanData;
-  localStorage.setItem('loanRequests', JSON.stringify(loans));
-  return newLoanData;
-}
-
 
 export default function LoansPage() {
   const queryClient = useQueryClient();

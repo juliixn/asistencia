@@ -45,7 +45,47 @@ const loanRequests: LoanRequest[] = [
     }
 ];
 
-const attendanceRecords: AttendanceRecord[] = []; // Start with no records
+// Generate some attendance records for the current month
+const attendanceRecords: AttendanceRecord[] = [];
+const today = new Date();
+const year = today.getFullYear();
+const month = today.getMonth();
+const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+employees.forEach(employee => {
+    for(let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        if (date > today) continue; // Don't generate for future dates
+
+        const dayOfWeek = date.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        const generateRecord = (shift: 'day' | 'night') => {
+            let status: AttendanceRecord['status'] = 'Asistencia';
+            if (isWeekend) {
+                status = 'Descanso';
+            } else {
+                 const random = Math.random();
+                 if (random < 0.03) status = 'Falta';
+                 else if (random < 0.08) status = 'Retardo';
+            }
+            
+            attendanceRecords.push({
+                id: `att-${employee.id}-${year}-${month + 1}-${day}-${shift}`,
+                employeeId: employee.id,
+                date: date.toISOString().split('T')[0],
+                shift,
+                status,
+                locationId: status === 'Asistencia' || status === 'Retardo' ? workLocations[Math.floor(Math.random() * workLocations.length)].id : null,
+                notes: null,
+                photoEvidence: null
+            });
+        }
+        generateRecord('day');
+        generateRecord('night');
+    }
+});
+
 
 export const initialData = {
     employees,

@@ -53,42 +53,7 @@ import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { initialData } from '@/lib/data';
-
-
-// --- MOCK API FUNCTIONS ---
-async function fetchEmployees(): Promise<Employee[]> {
-  const data = localStorage.getItem('employees');
-  return data ? JSON.parse(data) : initialData.employees;
-}
-
-async function createEmployee(newEmployee: Omit<Employee, 'id' | 'email'>): Promise<Employee> {
-  const employees = await fetchEmployees();
-  // Simplified email generation for demo purposes
-  const email = `${newEmployee.name.split(' ')[0].toLowerCase()}@test.com`;
-  const createdEmployee: Employee = { ...newEmployee, id: `emp-${Date.now()}`, email };
-  const updatedEmployees = [...employees, createdEmployee];
-  localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-  return createdEmployee;
-}
-
-async function updateEmployee(updatedEmployee: Partial<Employee> & { id: string }): Promise<Employee> {
-  const employees = await fetchEmployees();
-  const index = employees.findIndex(e => e.id === updatedEmployee.id);
-  if (index === -1) throw new Error("Employee not found");
-  const employeeToUpdate = employees[index];
-  const newEmployeeData = { ...employeeToUpdate, ...updatedEmployee };
-  employees[index] = newEmployeeData;
-  localStorage.setItem('employees', JSON.stringify(employees));
-  return newEmployeeData;
-}
-
-async function deleteEmployee(employeeId: string): Promise<{ id: string }> {
-    const employees = await fetchEmployees();
-    const updatedEmployees = employees.filter(e => e.id !== employeeId);
-    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-    return { id: employeeId };
-}
+import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from '@/lib/api';
 
 
 export default function EmployeesPage() {
