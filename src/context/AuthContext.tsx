@@ -1,72 +1,98 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Employee } from '@/lib/types';
-import { useQuery } from '@tanstack/react-query';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import type { Employee, EmployeeRole } from '@/lib/types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { initialData } from '@/lib/data';
 
 interface AuthContextType {
   user: { uid: string } | null;
-  employee: Employee | null; // The employee profile of the logged-in user.
+  employee: Employee | null; 
   loading: boolean;
+  login: (role: EmployeeRole, name: string, password?: string) => Promise<void>;
+  logout: () => void;
 }
 
-const DIRECTOR_EMAIL_FOR_DEMO = 'director@test.com';
+const AuthContext = createContext<AuthContextType>({ 
+    user: null, 
+    employee: null, 
+    loading: true,
+    login: async () => {},
+    logout: () => {},
+});
 
-const AuthContext = createContext<AuthContextType>({ user: null, employee: null, loading: true });
-
-async function findDirector(): Promise<Employee[]> {
+// Helper to get all employees from localStorage
+async function fetchAllEmployees(): Promise<Employee[]> {
     const data = localStorage.getItem('employees');
-    const employees: Employee[] = data ? JSON.parse(data) : initialData.employees;
-    return employees.filter(e => e.email === DIRECTOR_EMAIL_FOR_DEMO);
+    return data ? JSON.parse(data) : initialData.employees;
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Initialize local storage with mock data if it's empty
-  // This is a one-time setup for the demo environment
   useEffect(() => {
-    if (!localStorage.getItem('employees')) {
-        localStorage.setItem('employees', JSON.stringify(initialData.employees));
-    }
-    if (!localStorage.getItem('workLocations')) {
-        localStorage.setItem('workLocations', JSON.stringify(initialData.workLocations));
-    }
-    if (!localStorage.getItem('loanRequests')) {
-        localStorage.setItem('loanRequests', JSON.stringify(initialData.loanRequests));
-    }
-     if (!localStorage.getItem('attendanceRecords')) {
-        localStorage.setItem('attendanceRecords', JSON.stringify(initialData.attendanceRecords));
+    const initLocalStorage = () => {
+        if (!localStorage.getItem('employees')) {
+            localStorage.setItem('employees', JSON.stringify(initialData.employees));
+        }
+        if (!localStorage.getItem('workLocations')) {
+            localStorage.setItem('workLocations', JSON.stringify(initialData.workLocations));
+        }
+        if (!localStorage.getItem('loanRequests')) {
+            localStorage.setItem('loanRequests', JSON.stringify(initialData.loanRequests));
+        }
+        if (!localStorage.getItem('attendanceRecords')) {
+            localStorage.setItem('attendanceRecords', JSON.stringify(initialData.attendanceRecords));
+        }
+    };
+    initLocalStorage();
+  }, []);
+
+  // Check for a logged-in user in session storage on initial load
+  useEffect(() => {
+    try {
+        const storedEmployee = sessionStorage.getItem('currentEmployee');
+        if (storedEmployee) {
+            setEmployee(JSON.parse(storedEmployee));
+        }
+    } catch (error) {
+        console.error("Could not parse employee from session storage", error);
+        sessionStorage.removeItem('currentEmployee');
+    } finally {
+        setLoading(false);
     }
   }, []);
 
-  // For this demo, we'll "log in" as the director by default.
-  // We fetch the director's data from localStorage to simulate a user session.
-  const { data: directorQuery, isLoading: isEmployeeLoading } = useQuery({
-    queryKey: ['directorEmployee'],
-    queryFn: findDirector,
-  });
+  const login = useCallback(async (role: EmployeeRole, name: string, password?: string) => {
+    const employees = await fetchAllEmployees();
+    const foundEmployee = employees.find(
+      (e) => e.role === role && e.name.toLowerCase() === name.toLowerCase() && e.password === password
+    );
 
-  useEffect(() => {
-    if (!isEmployeeLoading) {
-      if (directorQuery && directorQuery.length > 0) {
-        setEmployee(directorQuery[0]);
-      } else {
-        // Fallback in case the director is not found in localStorage
-        const fallbackDirector = initialData.employees.find(e => e.email === DIRECTOR_EMAIL_FOR_DEMO);
-        setEmployee(fallbackDirector || null);
-      }
-      setLoading(false);
+    if (foundEmployee) {
+      setEmployee(foundEmployee);
+      sessionStorage.setItem('currentEmployee', JSON.stringify(foundEmployee));
+    } else {
+      throw new Error('Invalid credentials');
     }
-  }, [directorQuery, isEmployeeLoading]);
+  }, []);
+
+  const logout = useCallback(() => {
+    setEmployee(null);
+    sessionStorage.removeItem('currentEmployee');
+    // Clear react-query cache on logout to ensure fresh data for next user
+    queryClient.clear();
+  }, [queryClient]);
+  
 
   const user = employee ? { uid: employee.id } : null;
 
   return (
-    <AuthContext.Provider value={{ user, employee, loading }}>
+    <AuthContext.Provider value={{ user, employee, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

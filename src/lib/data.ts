@@ -2,11 +2,11 @@
 import type { Employee, WorkLocation, LoanRequest, AttendanceRecord } from './types';
 
 const employees: Employee[] = [
-  { id: 'emp-1', name: 'Carlos Mendoza', role: 'Director de Seguridad', shiftRate: 1200, email: 'director@test.com' },
-  { id: 'emp-2', name: 'Ana Garcia', role: 'Coordinador de Seguridad', shiftRate: 800, email: 'ana.g@test.com' },
-  { id: 'emp-3', name: 'Juan Perez', role: 'Supervisor de Seguridad', shiftRate: 600, email: 'juan.p@test.com' },
-  { id: 'emp-4', name: 'Maria Rodriguez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'maria.r@test.com' },
-  { id: 'emp-5', name: 'Luis Hernandez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'luis.h@test.com' },
+  { id: 'emp-1', name: 'Carlos Mendoza', role: 'Director de Seguridad', shiftRate: 1200, email: 'director@test.com', password: 'password123' },
+  { id: 'emp-2', name: 'Ana Garcia', role: 'Coordinador de Seguridad', shiftRate: 800, email: 'ana.g@test.com', password: 'password123' },
+  { id: 'emp-3', name: 'Juan Perez', role: 'Supervisor de Seguridad', shiftRate: 600, email: 'juan.p@test.com', password: 'password123' },
+  { id: 'emp-4', name: 'Maria Rodriguez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'maria.r@test.com', password: 'password123' },
+  { id: 'emp-5', name: 'Luis Hernandez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'luis.h@test.com', password: 'password123' },
 ];
 
 const workLocations: WorkLocation[] = [
