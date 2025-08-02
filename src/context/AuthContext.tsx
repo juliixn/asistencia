@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee, EmployeeRole } from '@/lib/types';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { initialData } from '@/lib/data';
 
 interface AuthContextType {
@@ -25,7 +25,12 @@ const AuthContext = createContext<AuthContextType>({
 // Helper to get all employees from localStorage
 async function fetchAllEmployees(): Promise<Employee[]> {
     const data = localStorage.getItem('employees');
-    return data ? JSON.parse(data) : initialData.employees;
+    // Initialize with mock data if it's empty
+    if (!data) {
+        localStorage.setItem('employees', JSON.stringify(initialData.employees));
+        return initialData.employees;
+    }
+    return JSON.parse(data);
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {

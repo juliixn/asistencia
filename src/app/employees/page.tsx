@@ -279,6 +279,8 @@ function EmployeeDialog({
   const [role, setRole] = React.useState<EmployeeRole | ''>(employee?.role || '');
   const [shiftRate, setShiftRate] = React.useState<number>(employee?.shiftRate || 0);
   const [email, setEmail] = React.useState(employee?.email || '');
+  const [password, setPassword] = React.useState(employee?.password || '');
+
   const { toast } = useToast();
 
   const isEditing = !!employee;
@@ -295,7 +297,7 @@ function EmployeeDialog({
     }
     
     // For editing, we pass the existing email. For creation, email is generated server-side.
-    const saveData: Omit<Employee, 'id'> = { name, role: role as EmployeeRole, shiftRate, email: employee?.email || '' };
+    const saveData: Omit<Employee, 'id'> = { name, role: role as EmployeeRole, shiftRate, email: employee?.email || '', password };
     if (!isEditing) {
         delete (saveData as Partial<typeof saveData>).email;
     }
@@ -339,6 +341,10 @@ function EmployeeDialog({
                     <Label htmlFor="email">Correo Electrónico</Label>
                     <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ejemplo@correo.com" disabled={isEditing} />
                     {!isEditing && <p className="text-xs text-muted-foreground">El correo se genera automáticamente al guardar.</p>}
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="password">Contraseña</Label>
+                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
                 </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
