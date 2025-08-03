@@ -51,6 +51,7 @@ import { fetchWorkLocations, createWorkLocation, updateWorkLocation, deleteWorkL
 export default function ServicesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { employee: currentUser } = useAuth();
     
     const { data: services, isLoading } = useQuery({
         queryKey: ['workLocations'],
@@ -66,6 +67,13 @@ export default function ServicesPage() {
             });
             queryClient.invalidateQueries({ queryKey: ['workLocations'] });
             setIsAddDialogOpen(false);
+        },
+        onError: (error) => {
+            toast({
+                variant: 'destructive',
+                title: 'Error al añadir servicio',
+                description: error.message
+            });
         }
     });
 
@@ -78,25 +86,39 @@ export default function ServicesPage() {
             });
             queryClient.invalidateQueries({ queryKey: ['workLocations'] });
             setEditingService(null);
+        },
+        onError: (error) => {
+            toast({
+                variant: 'destructive',
+                title: 'Error al actualizar',
+                description: error.message
+            });
         }
     });
 
     const deleteMutation = useMutation({
         mutationFn: deleteWorkLocation,
-        onSuccess: (data) => {
-            const serviceName = services?.find(s => s.id === data.id)?.name || 'El servicio';
+        onSuccess: (_data, deletedServiceId) => {
+            const serviceName = services?.find(s => s.id === deletedServiceId)?.name || 'El servicio';
             toast({
                 title: "Servicio Eliminado",
                 description: `Se ha eliminado "${serviceName}" de la lista de servicios.`
             });
             queryClient.invalidateQueries({ queryKey: ['workLocations'] });
+        },
+        onError: (error) => {
+            toast({
+                variant: 'destructive',
+                title: 'Error al eliminar',
+                description: error.message
+            });
         }
     });
     
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
-    const { employee: currentUser } = useAuth();
 
+    // Permission check: Only Coordinador and Director can manage services.
     const canManageServices = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
     
     const handleDelete = (serviceId: string) => {
@@ -123,7 +145,7 @@ export default function ServicesPage() {
             <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button disabled={!canManageServices}>
+                <Button disabled={!canManageServices} title={!canManageServices ? 'No tienes permiso para añadir servicios' : ''}>
                     <PlusCircle className="mr-2" />
                     Añadir Servicio
                 </Button>
@@ -161,7 +183,7 @@ export default function ServicesPage() {
                                         <TableCell className="text-right px-4">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={!canManageServices}>
+                                                    <Button variant="ghost" size="icon" disabled={!canManageServices} title={!canManageServices ? 'No tienes permiso para gestionar servicios' : ''}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>

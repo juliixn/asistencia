@@ -69,6 +69,8 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 export default function LoansPage() {
   const queryClient = useQueryClient();
+  const { employee: currentUser } = useAuth();
+  const { toast } = useToast();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
     queryKey: ['loans'],
@@ -81,8 +83,6 @@ export default function LoansPage() {
   });
 
   const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
-  const { toast } = useToast();
-  const { employee: currentUser } = useAuth();
 
   const createMutation = useMutation({
     mutationFn: createLoanRequest,
@@ -94,6 +94,13 @@ export default function LoansPage() {
         });
         queryClient.invalidateQueries({ queryKey: ['loans'] });
         setIsRequestDialogOpen(false);
+    },
+    onError: (error) => {
+        toast({
+            variant: "destructive",
+            title: "Error al crear solicitud",
+            description: error.message,
+        });
     }
   });
 
@@ -108,6 +115,13 @@ export default function LoansPage() {
         description: `La solicitud de ${employee?.name} ha sido actualizada.`,
       });
       queryClient.invalidateQueries({ queryKey: ['loans'] });
+    },
+     onError: (error) => {
+        toast({
+            variant: "destructive",
+            title: "Error al actualizar",
+            description: error.message,
+        });
     }
   });
 
@@ -129,9 +143,9 @@ export default function LoansPage() {
       });
   };
 
-  const canCreateRequest = currentUser?.role && ['Supervisor de Seguridad', 'Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
+  const canCreateRequest = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
   const canApproveRequest = currentUser?.role === 'Director de Seguridad';
-
+  
   const isLoading = loansLoading || employeesLoading;
 
   return (
@@ -139,10 +153,10 @@ export default function LoansPage() {
       <header className="p-4 border-b bg-white shadow-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Préstamos</h1>
-          {canCreateRequest && (
+          
             <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!canCreateRequest} title={!canCreateRequest ? 'No tienes permiso para crear solicitudes' : ''}>
                   <PlusCircle className="mr-2" />
                   <span className="hidden md:inline">Nueva Solicitud</span>
                   <span className="md:hidden">Añadir</span>
@@ -150,7 +164,6 @@ export default function LoansPage() {
               </DialogTrigger>
               <RequestLoanDialog onSave={handleCreateRequest} onClose={() => setIsRequestDialogOpen(false)} employees={employees || []} />
             </Dialog>
-          )}
         </div>
       </header>
       <main className="flex-1 p-2 md:p-6 overflow-auto">
@@ -293,7 +306,6 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
     
     const selectedEmployee = employees.find(e => e.id === employeeId);
     const maxLoanAmount = selectedEmployee ? (selectedEmployee.shiftRate * 15) / 3 : 0;
@@ -304,7 +316,6 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             title: "Campos Incompletos",
             description: "Por favor, completa todos los campos requeridos.",
         });
-        setIsProcessing(false);
         return;
     }
     if (amount > maxLoanAmount) {
@@ -313,7 +324,6 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             title: "Monto Excedido",
             description: `El monto solicitado excede el máximo de $${maxLoanAmount.toFixed(2)} permitido para este empleado.`,
         });
-        setIsProcessing(false);
         return;
     }
 
@@ -323,9 +333,10 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             title: "Firma Requerida",
             description: "Por favor, proporciona la firma del solicitante.",
         });
-        setIsProcessing(false);
         return;
     }
+    
+    setIsProcessing(true);
 
     try {
         const signatureDataUrl = signatureRef.current.toDataURL();
@@ -449,7 +460,7 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
                     <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onClose} disabled={isProcessing}>Cancelar</Button>
                 </DialogClose>
                 <Button type="submit" className="w-full sm:w-auto" disabled={isProcessing}>
-                    {isProcessing ? <><Loader2 className="animate-spin" /> Analizando...</> : "Enviar Solicitud"}
+                    {isProcessing ? <><Loader2 className="animate-spin mr-2" /> Analizando...</> : "Enviar Solicitud"}
                 </Button>
             </DialogFooter>
         </form>

@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { CalendarDays, FileDown, Briefcase, Users, FileText, CheckCircle, Calculator, AlertTriangle, Lock } from 'lucide-react';
-import { format, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import type { Employee, PayrollPeriod, PayrollDetail, LoanRequest, AttendanceRecord } from '@/lib/types';
@@ -39,7 +39,7 @@ declare module 'jspdf' {
 export default function PayrollPage() {
   const { toast } = useToast();
   const { employee: currentUser } = useAuth();
-  const [currentDate] = React.useState(new Date());
+  const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [payrollData, setPayrollData] = React.useState<PayrollDetail[]>([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
@@ -53,22 +53,19 @@ export default function PayrollPage() {
   });
 
   const canAccessPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
-
-  const startDay = period === '1-15' ? 1 : 16;
-  const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);
-  const startDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), startDay), 'yyyy-MM-dd');
-  const endDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), endDay), 'yyyy-MM-dd');
-
+  
   const { data: employees } = useQuery({
       queryKey: ['employees'],
       queryFn: fetchEmployees,
       enabled: canAccessPayroll,
   });
+
   const { data: allAttendance } = useQuery({
       queryKey: ['attendance'],
-      queryFn: fetchAttendanceRecords,
+      queryFn: () => fetchAttendanceRecords(null), // Fetch all records for calculation
       enabled: canAccessPayroll,
   });
+
   const { data: loanData } = useQuery({
       queryKey: ['loans', 'Aprobado'],
       queryFn: async () => {
@@ -78,19 +75,14 @@ export default function PayrollPage() {
       enabled: canAccessPayroll,
   });
   
-  const attendanceData = React.useMemo(() => {
-    if (!allAttendance) return [];
-    return allAttendance.filter(a => a.date >= startDate && a.date <= endDate);
-  }, [allAttendance, startDate, endDate]);
-
-  const handleCalculatePayroll = () => {
+  const handleCalculatePayroll = React.useCallback(() => {
     setIsCalculating(true);
     toast({
         title: "Calculando Nómina...",
         description: "Por favor espera mientras procesamos los datos.",
     });
 
-    if (!employees || !attendanceData || !loanData) {
+    if (!employees || !allAttendance || !loanData) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
@@ -99,10 +91,20 @@ export default function PayrollPage() {
         setIsCalculating(false);
         return;
     }
+    
+    const startDay = period === '1-15' ? 1 : 16;
+    const endDay = period === '1-15' ? 15 : getDaysInMonth(currentDate);
 
     setTimeout(() => {
         const calculatedPayroll = employees.map(employee => {
-            const employeeAttendance = attendanceData.filter(a => a.employeeId === employee.id);
+            const employeeAttendance = allAttendance.filter(a => {
+                const recordDate = parseISO(a.date);
+                return a.employeeId === employee.id &&
+                       recordDate.getFullYear() === currentDate.getFullYear() &&
+                       recordDate.getMonth() === currentDate.getMonth() &&
+                       recordDate.getDate() >= startDay &&
+                       recordDate.getDate() <= endDay;
+            });
             
             const shiftsWorked = employeeAttendance.filter(a => a.status === 'Asistencia').length;
             const lateArrivals = employeeAttendance.filter(a => a.status === 'Retardo').length;
@@ -155,7 +157,7 @@ export default function PayrollPage() {
             description: "La pre-nómina ha sido generada.",
         });
     }, 500);
-  }
+  }, [employees, allAttendance, loanData, period, currentDate, toast]);
 
   const handleExportGeneralPDF = () => {
     if (payrollData.length === 0) {

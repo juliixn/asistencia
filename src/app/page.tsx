@@ -120,6 +120,7 @@ export default function GuardianPayrollPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // --- Data Fetching ---
   const { data: employees, isLoading: employeesLoading } = useQuery({
@@ -142,7 +143,7 @@ export default function GuardianPayrollPage() {
   
   const { data: attendanceRecords, isLoading: attendanceLoading } = useQuery({
     queryKey: ['attendance', format(currentDate, 'yyyy-MM')],
-    queryFn: fetchAttendanceRecords
+    queryFn: () => fetchAttendanceRecords(format(currentDate, 'yyyy-MM'))
   });
 
   const attendanceMutation = useMutation({
@@ -154,6 +155,9 @@ export default function GuardianPayrollPage() {
           setDialogOpen(false);
           setSelectedCell(null);
       },
+      onError: (error) => {
+          toast({ variant: 'destructive', title: 'Error al actualizar', description: error.message });
+      }
   });
   
   // --- Derived State ---
@@ -181,7 +185,6 @@ export default function GuardianPayrollPage() {
     activeLoansAmount: 0,
   });
 
-  const { toast } = useToast();
 
   const calculateDashboardStats = React.useCallback(() => {
     if (!attendanceRecords || !loans || !employees) return;
@@ -231,7 +234,7 @@ export default function GuardianPayrollPage() {
   const changeMonth = (amount: number) => {
     const newDate = amount > 0 ? add(currentDate, { months: 1 }) : sub(currentDate, { months: 1 });
     setCurrentDate(newDate);
-    queryClient.invalidateQueries({ queryKey: ['attendance', format(newDate, 'yyyy-MM')] });
+    // No need to invalidate here, the query key change will trigger a refetch
   };
 
   const daysInPeriod = React.useMemo(() => {
@@ -363,6 +366,7 @@ export default function GuardianPayrollPage() {
     doc.save(`recibo_nomina_${employee.name.replace(/ /g, '_')}_${periodText.replace(/ /g, '_')}.pdf`);
   }
   
+  // Permission check for editing attendance
   const canEditAttendance = currentUser?.role && ['Supervisor de Seguridad', 'Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
   const canExportPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
@@ -510,12 +514,12 @@ export default function GuardianPayrollPage() {
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" disabled={!canExportPayroll} title={!canExportPayroll ? 'No tienes permiso para exportar nóminas' : ''}>
                                         <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employeeRow.id)} disabled={!canExportPayroll}>
+                                    <DropdownMenuItem onClick={() => handleExportIndividualPDF(employeeRow.id)}>
                                         <FileText className="mr-2 h-4 w-4" />
                                         <span>Exportar Nómina Individual</span>
                                     </DropdownMenuItem>
@@ -594,7 +598,7 @@ function UpdateAttendanceDialog({
 
   React.useEffect(() => {
     if (isOpen) {
-        setStatus(currentRecord?.status);
+        setStatus(currentRecord?.status || 'Asistencia');
         setLocationId(currentRecord?.locationId);
         setNotes(currentRecord?.notes || '');
         setPhoto(null);

@@ -59,6 +59,7 @@ import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from '
 export default function EmployeesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { employee: currentUser } = useAuth();
 
     const { data: employees, isLoading } = useQuery({
       queryKey: ['employees'],
@@ -75,6 +76,13 @@ export default function EmployeesPage() {
             });
             setIsAddDialogOpen(false);
         },
+        onError: (error) => {
+             toast({
+                variant: 'destructive',
+                title: "Error",
+                description: `Hubo un problema al crear el empleado: ${error.message}`,
+            });
+        }
     });
 
     const updateMutation = useMutation({
@@ -87,24 +95,38 @@ export default function EmployeesPage() {
             });
             setEditingEmployee(null);
         },
+         onError: (error) => {
+             toast({
+                variant: 'destructive',
+                title: "Error",
+                description: `Hubo un problema al actualizar el empleado: ${error.message}`,
+            });
+        }
     });
 
     const deleteMutation = useMutation({
         mutationFn: deleteEmployee,
-        onSuccess: (data) => {
-            const employeeName = employees?.find(e => e.id === data.id)?.name || 'El empleado';
+        onSuccess: (_data, deletedEmployeeId) => {
+            const employeeName = employees?.find(e => e.id === deletedEmployeeId)?.name || 'El empleado';
             queryClient.invalidateQueries({ queryKey: ['employees'] });
             toast({
                 title: "Empleado Eliminado",
                 description: `Se ha eliminado a ${employeeName} de la lista de personal.`
             });
         },
+         onError: (error) => {
+             toast({
+                variant: 'destructive',
+                title: "Error",
+                description: `Hubo un problema al eliminar el empleado: ${error.message}`,
+            });
+        }
     });
 
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
-    const { employee: currentUser } = useAuth();
     
+    // Permission check: Only Coordinador and Director can manage employees.
     const canManageEmployees = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
@@ -131,7 +153,7 @@ export default function EmployeesPage() {
                 <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Empleados</h1>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button disabled={!canManageEmployees}>
+                    <Button disabled={!canManageEmployees} title={!canManageEmployees ? 'No tienes permiso para añadir empleados' : ''}>
                         <PlusCircle className="mr-2" />
                         Añadir Empleado
                     </Button>
@@ -175,7 +197,7 @@ export default function EmployeesPage() {
                                     <TableCell className="text-right px-4">
                                         <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" disabled={!canManageEmployees}>
+                                            <Button variant="ghost" size="icon" disabled={!canManageEmployees} title={!canManageEmployees ? 'No tienes permiso para gestionar empleados' : ''}>
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -244,7 +266,7 @@ function EmployeeDialog({
   const [role, setRole] = React.useState<EmployeeRole | ''>(employee?.role || '');
   const [shiftRate, setShiftRate] = React.useState<number>(employee?.shiftRate || 0);
   const [email, setEmail] = React.useState(employee?.email || '');
-  const [password, setPassword] = React.useState(employee?.password || '');
+  const [password, setPassword] = React.useState('');
 
   const { toast } = useToast();
 
@@ -261,13 +283,18 @@ function EmployeeDialog({
         return;
     }
     
-    // For editing, we pass the existing email. For creation, email is generated server-side.
-    const saveData: Omit<Employee, 'id'> = { name, role: role as EmployeeRole, shiftRate, email: employee?.email || '', password };
-    if (!isEditing) {
-        delete (saveData as Partial<typeof saveData>).email;
+    const saveData: Partial<Omit<Employee, 'id'>> = { 
+        name, 
+        role: role as EmployeeRole, 
+        shiftRate,
+        email: isEditing ? employee.email : `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardian.co`,
+    };
+
+    if (password) {
+        saveData.password = password;
     }
 
-    onSave(saveData as any); // Type assertion based on isEditing logic
+    onSave(saveData as Omit<Employee, 'id' | 'email'>);
   }
 
   return (
@@ -309,7 +336,7 @@ function EmployeeDialog({
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={isEditing ? 'Dejar en blanco para no cambiar' : '••••••••'} />
                 </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">

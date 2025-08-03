@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchAllEmployees } from '@/lib/api';
+import { fetchEmployees } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = useCallback(async (role: EmployeeRole, name: string, password?: string) => {
-    const employees = await fetchAllEmployees();
+    const employees = await fetchEmployees();
     const foundEmployee = employees.find(
       (e) => e.role === role && e.name.toLowerCase() === name.toLowerCase() && e.password === password
     );
