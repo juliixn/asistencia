@@ -271,6 +271,7 @@ function EmployeeDialog({
   const { toast } = useToast();
 
   const isEditing = !!employee;
+  const isGuard = role === 'Guardia';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,10 +288,10 @@ function EmployeeDialog({
         name, 
         role: role as EmployeeRole, 
         shiftRate,
-        email: isEditing ? employee.email : `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardian.co`,
+        email: isEditing ? employee.email : (isGuard ? `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardia.local` : `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardian.co`),
     };
 
-    if (password) {
+    if (password && !isGuard) {
         saveData.password = password;
     }
 
@@ -318,6 +319,7 @@ function EmployeeDialog({
                                 <SelectValue placeholder="Seleccionar rol" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="Guardia">Guardia</SelectItem>
                                 <SelectItem value="Supervisor de Seguridad">Supervisor de Seguridad</SelectItem>
                                 <SelectItem value="Coordinador de Seguridad">Coordinador de Seguridad</SelectItem>
                                 <SelectItem value="Director de Seguridad">Director de Seguridad</SelectItem>
@@ -334,10 +336,12 @@ function EmployeeDialog({
                     <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ejemplo@correo.com" disabled={isEditing} />
                     {!isEditing && <p className="text-xs text-muted-foreground">El correo se genera automáticamente al guardar.</p>}
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={isEditing ? 'Dejar en blanco para no cambiar' : '••••••••'} />
-                </div>
+                {!isGuard && (
+                    <div className="space-y-2">
+                        <Label htmlFor="password">Contraseña</Label>
+                        <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={isEditing ? 'Dejar en blanco para no cambiar' : '••••••••'} />
+                    </div>
+                )}
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
                  <DialogClose asChild>

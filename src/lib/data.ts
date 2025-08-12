@@ -9,6 +9,9 @@ const employees: Employee[] = [
   { id: 'sup-001', name: 'Juan Perez', role: 'Supervisor de Seguridad', shiftRate: 600, email: 'juan.p@guardian.co', password: 'password123' },
   { id: 'sup-002', name: 'Maria Rodriguez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'maria.r@guardian.co', password: 'password123' },
   { id: 'sup-003', name: 'Luis Hernandez', role: 'Supervisor de Seguridad', shiftRate: 450, email: 'luis.h@guardian.co', password: 'password123' },
+  { id: 'gua-001', name: 'Pedro Ramirez', role: 'Guardia', shiftRate: 350, email: 'pedro.r@guardia.local', password: '' },
+  { id: 'gua-002', name: 'Sofia Torres', role: 'Guardia', shiftRate: 350, email: 'sofia.t@guardia.local', password: '' },
+  { id: 'gua-003', name: 'Jorge Jimenez', role: 'Guardia', shiftRate: 350, email: 'jorge.j@guardia.local', password: '' },
 ];
 
 const workLocations: WorkLocation[] = [
