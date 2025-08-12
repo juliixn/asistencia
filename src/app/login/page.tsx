@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2 } from 'lucide-react';
-import { seedInitialData } from '@/lib/api';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
@@ -24,18 +23,6 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState('');
   const { toast } = useToast();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
-
-  // Seed data on first load
-  React.useEffect(() => {
-    const seed = async () => {
-        try {
-            await seedInitialData();
-        } catch (error) {
-            console.error("Failed to seed data on load:", error);
-        }
-    };
-    seed();
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +40,12 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // AuthProvider will handle navigation
-    } catch (error) {
+      // AuthProvider will handle navigation to the main app content.
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error de Autenticación',
-        description: 'Las credenciales proporcionadas son incorrectas. Verifica tus datos.',
+        description: error.message || 'Las credenciales proporcionadas son incorrectas. Verifica tus datos.',
       });
     } finally {
       setIsLoggingIn(false);

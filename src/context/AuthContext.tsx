@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchEmployees } from '@/lib/api';
+import { fetchEmployees, seedInitialData } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
@@ -30,19 +30,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  // Check for a logged-in user in session storage on initial load
   useEffect(() => {
-    try {
-        const storedEmployee = sessionStorage.getItem('currentEmployee');
-        if (storedEmployee) {
-            setEmployee(JSON.parse(storedEmployee));
-        }
-    } catch (error) {
-        console.error("Could not parse employee from session storage", error);
-        sessionStorage.removeItem('currentEmployee');
-    } finally {
-        setLoading(false);
-    }
+    const initializeApp = async () => {
+      // Ensure data is seeded before attempting to log in
+      await seedInitialData();
+      try {
+          const storedEmployee = sessionStorage.getItem('currentEmployee');
+          if (storedEmployee) {
+              setEmployee(JSON.parse(storedEmployee));
+          }
+      } catch (error) {
+          console.error("Could not parse employee from session storage", error);
+          sessionStorage.removeItem('currentEmployee');
+      } finally {
+          setLoading(false);
+      }
+    };
+    initializeApp();
   }, []);
   
   const handleSetEmployee = useCallback((newEmployee: Employee | null) => {
@@ -58,22 +62,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const employees = await fetchEmployees();
     const foundEmployee = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
 
-    // User exists, is not a guard, and password matches
     if (foundEmployee && foundEmployee.role !== 'Guardia' && foundEmployee.password === password) {
       handleSetEmployee(foundEmployee);
     } else {
-      // If user is not found, or is a guard, or password doesn't match
-      throw new Error('Invalid credentials');
+      throw new Error('Las credenciales proporcionadas son incorrectas.');
     }
   }, [handleSetEmployee]);
 
   const logout = useCallback(() => {
     handleSetEmployee(null);
-    // Clear react-query cache on logout to ensure fresh data for next user
     queryClient.clear();
   }, [handleSetEmployee, queryClient]);
   
-
   const user = employee ? { uid: employee.id } : null;
 
   return (
