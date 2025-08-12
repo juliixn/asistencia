@@ -224,8 +224,12 @@ export default function GuardianPayrollPage() {
 
 
   React.useEffect(() => {
-    calculateDashboardStats();
-  }, [calculateDashboardStats]);
+    // Recalculate stats when data changes
+    if (employees && loans && attendanceRecords) {
+        calculateDashboardStats();
+    }
+  }, [employees, loans, attendanceRecords, calculateDashboardStats]);
+
 
   const handlePeriodChange = (value: string) => {
     setPeriod(value as PayrollPeriod);
@@ -694,3 +698,5 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
+
+    
