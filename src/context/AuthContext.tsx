@@ -43,14 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = useCallback(async (email: string, password: string, employees: Employee[]) => {
-    const foundEmployee = employees.find(
-      (e) => e.email.toLowerCase() === email.toLowerCase() && e.password === password
-    );
+    const foundEmployee = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
 
-    if (foundEmployee) {
+    // User exists, is not a guard, and password matches
+    if (foundEmployee && foundEmployee.role !== 'Guardia' && foundEmployee.password === password) {
       setEmployee(foundEmployee);
       sessionStorage.setItem('currentEmployee', JSON.stringify(foundEmployee));
     } else {
+      // If user is not found, or is a guard, or password doesn't match
       throw new Error('Invalid credentials');
     }
   }, []);
