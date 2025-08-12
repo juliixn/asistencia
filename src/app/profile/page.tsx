@@ -14,7 +14,7 @@ import { Loader2, UserCircle } from 'lucide-react';
 import type { Employee } from '@/lib/types';
 
 export default function ProfilePage() {
-  const { employee, loading, login } = useAuth();
+  const { employee, loading, login, setEmployee: setAuthEmployee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,16 +38,13 @@ export default function ProfilePage() {
             description: "Tu información ha sido actualizada correctamente.",
         });
         
-        // Re-login with new data to update the auth context state
-        // We need all employees for the login function to work correctly
-        const allEmployees = await fetchEmployees(); 
-        
-        if (employee) {
-           await login(updatedData.email, password || employee.password || '', allEmployees);
-        }
+        // Directly update the employee in the auth context to reflect changes instantly.
+        // This is more efficient than a full re-login.
+        setAuthEmployee(updatedData);
 
         setPassword('');
         setConfirmPassword('');
+        // Invalidate queries to refetch data in other components if needed.
         queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
     onError: (error) => {
@@ -71,11 +68,11 @@ export default function ProfilePage() {
       });
       return;
     }
-
+    
+    // Email and role are not editable from the profile page.
     const updatedData: Partial<Employee> & { id: string } = {
         id: employee.id,
         name,
-        email: employee.email // Email is not changed, but needed for relogin
     };
 
     if (password) {

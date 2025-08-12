@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string, employees: Employee[]) => Promise<void>;
   logout: () => void;
+  setEmployee: (employee: Employee | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     login: async () => {},
     logout: () => {},
+    setEmployee: () => {},
 });
 
 
@@ -41,32 +43,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
     }
   }, []);
+  
+  const handleSetEmployee = useCallback((newEmployee: Employee | null) => {
+    setEmployee(newEmployee);
+    if (newEmployee) {
+      sessionStorage.setItem('currentEmployee', JSON.stringify(newEmployee));
+    } else {
+      sessionStorage.removeItem('currentEmployee');
+    }
+  }, []);
 
   const login = useCallback(async (email: string, password: string, employees: Employee[]) => {
     const foundEmployee = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
 
     // User exists, is not a guard, and password matches
     if (foundEmployee && foundEmployee.role !== 'Guardia' && foundEmployee.password === password) {
-      setEmployee(foundEmployee);
-      sessionStorage.setItem('currentEmployee', JSON.stringify(foundEmployee));
+      handleSetEmployee(foundEmployee);
     } else {
       // If user is not found, or is a guard, or password doesn't match
       throw new Error('Invalid credentials');
     }
-  }, []);
+  }, [handleSetEmployee]);
 
   const logout = useCallback(() => {
-    setEmployee(null);
-    sessionStorage.removeItem('currentEmployee');
+    handleSetEmployee(null);
     // Clear react-query cache on logout to ensure fresh data for next user
     queryClient.clear();
-  }, [queryClient]);
+  }, [handleSetEmployee, queryClient]);
   
 
   const user = employee ? { uid: employee.id } : null;
 
   return (
-    <AuthContext.Provider value={{ user, employee, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, employee, loading, login, logout, setEmployee: handleSetEmployee }}>
       {children}
     </AuthContext.Provider>
   );
