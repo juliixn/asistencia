@@ -9,15 +9,15 @@ import {
   Building,
   FileText,
   Landmark,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/employees", label: "Empleados", icon: Users },
-  { href: "/services", label: "Servicios", icon: Building },
-  { href: "/payroll", label: "Nómina", icon: FileText },
   { href: "/loans", label: "Préstamos", icon: Landmark },
+  { href: "/profile", label: "Perfil", icon: UserCircle },
 ];
 
 export function BottomNavbar() {

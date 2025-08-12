@@ -11,6 +11,7 @@ import {
   Landmark,
   Shield,
   LogOut,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -22,6 +23,7 @@ const menuItems = [
   { href: "/services", label: "Servicios", icon: Building },
   { href: "/payroll", label: "Nómina", icon: FileText },
   { href: "/loans", label: "Préstamos", icon: Landmark },
+  { href: "/profile", label: "Mi Perfil", icon: UserCircle },
 ];
 
 export function Sidebar() {
