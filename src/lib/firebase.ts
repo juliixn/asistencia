@@ -24,9 +24,4 @@ if (!getApps().length) {
 
 const db = getFirestore(app);
 
-// On first run, seed the database with initial data
-import { seedInitialData } from './api';
-seedInitialData();
-
-
 export { app, db };

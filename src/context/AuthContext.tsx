@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchEmployees } from '@/lib/api';
+import { fetchEmployees, seedInitialData } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
@@ -27,6 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+
+  // On first app load, try to seed the database. This will only run if the DB is empty.
+  useEffect(() => {
+    seedInitialData();
+  }, []);
 
   // Check for a logged-in user in session storage on initial load
   useEffect(() => {
