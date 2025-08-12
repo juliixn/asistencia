@@ -32,17 +32,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Ensure data is seeded before attempting to log in
+      // This function ensures the initial data is present in Firestore.
       await seedInitialData();
+      
       try {
+          // Check if a user session already exists in sessionStorage.
           const storedEmployee = sessionStorage.getItem('currentEmployee');
           if (storedEmployee) {
               setEmployee(JSON.parse(storedEmployee));
           }
       } catch (error) {
           console.error("Could not parse employee from session storage", error);
+          // Clear potentially corrupted session data.
           sessionStorage.removeItem('currentEmployee');
       } finally {
+          // Finished loading session state.
           setLoading(false);
       }
     };
