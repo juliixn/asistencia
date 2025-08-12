@@ -4,12 +4,13 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { fetchEmployees } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
   employee: Employee | null; 
   loading: boolean;
-  login: (email: string, password: string, employees: Employee[]) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   setEmployee: (employee: Employee | null) => void;
 }
@@ -53,7 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string, employees: Employee[]) => {
+  const login = useCallback(async (email: string, password: string) => {
+    const employees = await fetchEmployees();
     const foundEmployee = employees.find(e => e.email.toLowerCase() === email.toLowerCase());
 
     // User exists, is not a guard, and password matches

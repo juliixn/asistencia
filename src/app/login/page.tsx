@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2 } from 'lucide-react';
-import { fetchEmployees, seedInitialData } from '@/lib/api';
+import { seedInitialData } from '@/lib/api';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
@@ -52,8 +52,7 @@ export default function LoginPage() {
     }
 
     try {
-      const employees = await fetchEmployees();
-      await login(email, password, employees);
+      await login(email, password);
       // AuthProvider will handle navigation
     } catch (error) {
       toast({

@@ -9,12 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateEmployee, fetchEmployees } from '@/lib/api';
+import { updateEmployee } from '@/lib/api';
 import { Loader2, UserCircle } from 'lucide-react';
 import type { Employee } from '@/lib/types';
 
 export default function ProfilePage() {
-  const { employee, loading, login, setEmployee: setAuthEmployee } = useAuth();
+  const { employee, loading, setEmployee: setAuthEmployee } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -39,7 +39,6 @@ export default function ProfilePage() {
         });
         
         // Directly update the employee in the auth context to reflect changes instantly.
-        // This is more efficient than a full re-login.
         setAuthEmployee(updatedData);
 
         setPassword('');
