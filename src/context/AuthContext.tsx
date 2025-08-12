@@ -4,13 +4,12 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
-import { fetchEmployees, seedInitialData } from '@/lib/api';
 
 interface AuthContextType {
   user: { uid: string } | null;
   employee: Employee | null; 
   loading: boolean;
-  login: (role: EmployeeRole, name: string, password?: string) => Promise<void>;
+  login: (role: EmployeeRole, name: string, password: string, employees: Employee[]) => Promise<void>;
   logout: () => void;
 }
 
@@ -28,11 +27,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  // On first app load, try to seed the database. This will only run if the DB is empty.
-  useEffect(() => {
-    seedInitialData();
-  }, []);
-
   // Check for a logged-in user in session storage on initial load
   useEffect(() => {
     try {
@@ -48,8 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = useCallback(async (role: EmployeeRole, name: string, password?: string) => {
-    const employees = await fetchEmployees();
+  const login = useCallback(async (role: EmployeeRole, name: string, password: string, employees: Employee[]) => {
     const foundEmployee = employees.find(
       (e) => e.role === role && e.name.toLowerCase() === name.toLowerCase() && e.password === password
     );

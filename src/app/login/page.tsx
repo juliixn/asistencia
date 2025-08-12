@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2 } from 'lucide-react';
-import type { EmployeeRole } from '@/lib/types';
+import type { Employee, EmployeeRole } from '@/lib/types';
+import { fetchEmployees, seedInitialData } from '@/lib/api';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
@@ -32,6 +33,11 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState('');
   const { toast } = useToast();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
+
+  // Seed data on first load
+  React.useEffect(() => {
+    seedInitialData();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +54,9 @@ export default function LoginPage() {
     }
 
     try {
-      await login(role as EmployeeRole, name, password);
+      // Fetch employees here and pass to login function
+      const employees = await fetchEmployees();
+      await login(role as EmployeeRole, name, password, employees);
       // AuthProvider will handle navigation
     } catch (error) {
       toast({
@@ -114,8 +122,8 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" type="submit" disabled={isLoggingIn}>
-                {isLoggingIn ? <Loader2 className="animate-spin" /> : "Iniciar Sesión"}
+            <Button className="w-full" type="submit" disabled={isLoggingIn || loading}>
+                {isLoggingIn || loading ? <Loader2 className="animate-spin" /> : "Iniciar Sesión"}
             </Button>
           </CardFooter>
         </form>
