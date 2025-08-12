@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateEmployee } from '@/lib/api';
+import { updateEmployee, fetchEmployees } from '@/lib/api';
 import { Loader2, UserCircle } from 'lucide-react';
+import type { Employee } from '@/lib/types';
 
 export default function ProfilePage() {
   const { employee, loading, login } = useAuth();
@@ -36,10 +37,15 @@ export default function ProfilePage() {
             title: "Perfil Actualizado",
             description: "Tu información ha sido actualizada correctamente.",
         });
+        
         // Re-login with new data to update the auth context state
+        // We need all employees for the login function to work correctly
+        const allEmployees = await fetchEmployees(); 
+        
         if (employee) {
-           await login(updatedData.role, updatedData.name, updatedData.password || employee.password || '', [updatedData]);
+           await login(updatedData.email, password || employee.password || '', allEmployees);
         }
+
         setPassword('');
         setConfirmPassword('');
         queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -66,9 +72,10 @@ export default function ProfilePage() {
       return;
     }
 
-    const updatedData: Partial<typeof employee> & { id: string } = {
+    const updatedData: Partial<Employee> & { id: string } = {
         id: employee.id,
         name,
+        email: employee.email // Email is not changed, but needed for relogin
     };
 
     if (password) {

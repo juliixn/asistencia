@@ -14,49 +14,46 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2 } from 'lucide-react';
-import type { Employee, EmployeeRole } from '@/lib/types';
 import { fetchEmployees, seedInitialData } from '@/lib/api';
 
 export default function LoginPage() {
   const { login, loading } = useAuth();
-  const [role, setRole] = React.useState<EmployeeRole | ''>('');
-  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const { toast } = useToast();
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
 
   // Seed data on first load
   React.useEffect(() => {
-    seedInitialData();
+    const seed = async () => {
+        try {
+            await seedInitialData();
+        } catch (error) {
+            console.error("Failed to seed data on load:", error);
+        }
+    };
+    seed();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
     
-    if (!role || !name || !password) {
+    if (!email || !password) {
       toast({
         variant: 'destructive',
         title: 'Campos Incompletos',
-        description: 'Por favor, completa todos los campos para iniciar sesión.',
+        description: 'Por favor, introduce tu correo y contraseña.',
       });
       setIsLoggingIn(false);
       return;
     }
 
     try {
-      // Fetch employees here and pass to login function
       const employees = await fetchEmployees();
-      await login(role as EmployeeRole, name, password, employees);
+      await login(email, password, employees);
       // AuthProvider will handle navigation
     } catch (error) {
       toast({
@@ -88,25 +85,13 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="role">Tipo de Usuario</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as EmployeeRole)}>
-                <SelectTrigger id="role" className="w-full">
-                  <SelectValue placeholder="Selecciona tu rol" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Director de Seguridad">Director de Seguridad</SelectItem>
-                  <SelectItem value="Coordinador de Seguridad">Coordinador de Seguridad</SelectItem>
-                  <SelectItem value="Supervisor de Seguridad">Supervisor de Seguridad</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre y Apellido</Label>
+              <Label htmlFor="email">Correo Electrónico</Label>
               <Input
-                id="name"
-                placeholder="Ej. Juan Pérez"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="ejemplo@guardian.co"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -115,6 +100,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

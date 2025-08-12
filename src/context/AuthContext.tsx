@@ -2,14 +2,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { Employee, EmployeeRole } from '@/lib/types';
+import type { Employee } from '@/lib/types';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface AuthContextType {
   user: { uid: string } | null;
   employee: Employee | null; 
   loading: boolean;
-  login: (role: EmployeeRole, name: string, password: string, employees: Employee[]) => Promise<void>;
+  login: (email: string, password: string, employees: Employee[]) => Promise<void>;
   logout: () => void;
 }
 
@@ -42,9 +42,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = useCallback(async (role: EmployeeRole, name: string, password: string, employees: Employee[]) => {
+  const login = useCallback(async (email: string, password: string, employees: Employee[]) => {
     const foundEmployee = employees.find(
-      (e) => e.role === role && e.name.toLowerCase() === name.toLowerCase() && e.password === password
+      (e) => e.email.toLowerCase() === email.toLowerCase() && e.password === password
     );
 
     if (foundEmployee) {
