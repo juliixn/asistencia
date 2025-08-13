@@ -10,12 +10,8 @@ import {
   FileText,
   Landmark,
   Shield,
-  LogOut,
-  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "./ui/button";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -23,12 +19,10 @@ const menuItems = [
   { href: "/services", label: "Servicios", icon: Building },
   { href: "/payroll", label: "Nómina", icon: FileText },
   { href: "/loans", label: "Préstamos", icon: Landmark },
-  { href: "/profile", label: "Mi Perfil", icon: UserCircle },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { employee, logout } = useAuth();
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
@@ -58,20 +52,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-4 py-6 border-t border-sidebar-border">
-         <div className="mb-4 text-center">
-            <p className="text-sm font-semibold">{employee?.name}</p>
-            <p className="text-xs text-sidebar-foreground/70">{employee?.role}</p>
-         </div>
-         <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 px-4 py-3 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={logout}
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Cerrar Sesión</span>
-         </Button>
-      </div>
     </aside>
   );
 }

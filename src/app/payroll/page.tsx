@@ -26,7 +26,6 @@ import { format, getDaysInMonth, startOfMonth, endOfMonth, parseISO } from 'date
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import type { Employee, PayrollPeriod, PayrollDetail, LoanRequest, AttendanceRecord } from '@/lib/types';
-import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { fetchEmployees, fetchLoanRequests, fetchAttendanceRecords } from '@/lib/api';
 
@@ -38,7 +37,6 @@ declare module 'jspdf' {
 
 export default function PayrollPage() {
   const { toast } = useToast();
-  const { employee: currentUser } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   const [payrollData, setPayrollData] = React.useState<PayrollDetail[]>([]);
@@ -51,19 +49,15 @@ export default function PayrollPage() {
     totalPenalties: 0,
     totalBonuses: 0,
   });
-
-  const canAccessPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
   
   const { data: employees } = useQuery({
       queryKey: ['employees'],
       queryFn: fetchEmployees,
-      enabled: canAccessPayroll,
   });
 
   const { data: allAttendance } = useQuery({
       queryKey: ['attendance'],
       queryFn: () => fetchAttendanceRecords(null), // Fetch all records for calculation
-      enabled: canAccessPayroll,
   });
 
   const { data: loanData } = useQuery({
@@ -72,7 +66,6 @@ export default function PayrollPage() {
           const allLoans = await fetchLoanRequests();
           return allLoans.filter(l => l.status === 'Aprobado');
       },
-      enabled: canAccessPayroll,
   });
   
   const handleCalculatePayroll = React.useCallback(() => {
@@ -215,26 +208,6 @@ export default function PayrollPage() {
         title: 'Exportación Exitosa',
         description: 'El reporte de nómina ha sido generado en PDF.',
     });
-  }
-
-  if (!canAccessPayroll) {
-    return (
-        <div className="flex flex-col h-full bg-gray-50/50 items-center justify-center p-6">
-            <Card className="w-full max-w-md text-center">
-                <CardHeader>
-                    <div className="mx-auto bg-destructive/10 text-destructive p-3 rounded-full mb-4">
-                        <Lock className="w-12 h-12" />
-                    </div>
-                    <CardTitle>Acceso Denegado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <CardDescription>
-                        No tienes los permisos necesarios para acceder a esta sección. Por favor, contacta a un administrador.
-                    </CardDescription>
-                </CardContent>
-            </Card>
-        </div>
-    )
   }
 
   return (

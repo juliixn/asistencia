@@ -7,7 +7,6 @@ export interface Employee {
   role: EmployeeRole;
   shiftRate: number;
   email: string;
-  password?: string; // Add password field
 }
 
 export interface WorkLocation {

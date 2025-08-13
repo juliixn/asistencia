@@ -43,7 +43,6 @@ import { Input } from '@/components/ui/input';
 import type { WorkLocation } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchWorkLocations, createWorkLocation, updateWorkLocation, deleteWorkLocation } from '@/lib/api';
 
@@ -51,7 +50,6 @@ import { fetchWorkLocations, createWorkLocation, updateWorkLocation, deleteWorkL
 export default function ServicesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const { employee: currentUser } = useAuth();
     
     const { data: services, isLoading } = useQuery({
         queryKey: ['workLocations'],
@@ -118,9 +116,6 @@ export default function ServicesPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingService, setEditingService] = React.useState<WorkLocation | null>(null);
 
-    // Permission check: Only Coordinador and Director can manage services.
-    const canManageServices = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
-    
     const handleDelete = (serviceId: string) => {
         deleteMutation.mutate(serviceId);
     }
@@ -145,7 +140,7 @@ export default function ServicesPage() {
             <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Servicios</h1>
              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button disabled={!canManageServices} title={!canManageServices ? 'No tienes permiso para añadir servicios' : ''}>
+                <Button>
                     <PlusCircle className="mr-2" />
                     Añadir Servicio
                 </Button>
@@ -183,7 +178,7 @@ export default function ServicesPage() {
                                         <TableCell className="text-right px-4">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={!canManageServices} title={!canManageServices ? 'No tienes permiso para gestionar servicios' : ''}>
+                                                    <Button variant="ghost" size="icon">
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>

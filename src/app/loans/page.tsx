@@ -55,7 +55,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { Employee, LoanRequest, LoanStatus } from '@/lib/types';
 import { PlusCircle, Eraser, MoreHorizontal, CheckCircle, XCircle, Clock, ThumbsUp, ThumbsDown, Eye, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useAuth } from '@/context/AuthContext';
 import { analyzeSignature } from '@/ai/flows/analyze-signature';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchLoanRequests, fetchEmployees, createLoanRequest, updateLoanRequest } from '@/lib/api';
@@ -69,7 +68,6 @@ const statusConfig: Record<LoanStatus, { label: string; icon: React.ElementType;
 
 export default function LoansPage() {
   const queryClient = useQueryClient();
-  const { employee: currentUser } = useAuth();
   const { toast } = useToast();
 
   const { data: loans, isLoading: loansLoading } = useQuery({
@@ -130,21 +128,16 @@ export default function LoansPage() {
   }
 
   const handleUpdateLoanStatus = (loanId: string, newStatus: 'Aprobado' | 'Rechazado') => {
-      if (!currentUser) return;
-
       const loan = loans?.find(l => l.id === loanId);
       if (!loan) return;
       
       updateMutation.mutate({
         id: loanId,
         status: newStatus,
-        approvedById: currentUser.id,
+        approvedById: 'system', // No logged in user
         approvalDate: new Date().toISOString().split('T')[0],
       });
   };
-
-  const canCreateRequest = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
-  const canApproveRequest = currentUser?.role === 'Director de Seguridad';
   
   const isLoading = loansLoading || employeesLoading;
 
@@ -156,7 +149,7 @@ export default function LoansPage() {
           
             <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
               <DialogTrigger asChild>
-                <Button disabled={!canCreateRequest} title={!canCreateRequest ? 'No tienes permiso para crear solicitudes' : ''}>
+                <Button>
                   <PlusCircle className="mr-2" />
                   <span className="hidden md:inline">Nueva Solicitud</span>
                   <span className="md:hidden">Añadir</span>
@@ -222,7 +215,7 @@ export default function LoansPage() {
                                               <Eye className="mr-2 h-4 w-4"/>
                                               Ver Detalles
                                           </DropdownMenuItem>
-                                          {canApproveRequest && isPending && (
+                                          {isPending && (
                                             <>
                                               <DropdownMenuSeparator />
                                               <AlertDialog>

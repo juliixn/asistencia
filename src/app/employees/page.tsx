@@ -51,7 +51,6 @@ import { Badge } from '@/components/ui/badge';
 import type { Employee, EmployeeRole } from '@/lib/types';
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from '@/lib/api';
 
@@ -59,7 +58,6 @@ import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from '
 export default function EmployeesPage() {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const { employee: currentUser } = useAuth();
 
     const { data: employees, isLoading } = useQuery({
       queryKey: ['employees'],
@@ -126,8 +124,6 @@ export default function EmployeesPage() {
     const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     
-    // Permission check: Only Coordinador and Director can manage employees.
-    const canManageEmployees = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
 
     const handleDelete = (employeeId: string) => {
         deleteMutation.mutate(employeeId);
@@ -153,7 +149,7 @@ export default function EmployeesPage() {
                 <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Gestión de Empleados</h1>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button disabled={!canManageEmployees} title={!canManageEmployees ? 'No tienes permiso para añadir empleados' : ''}>
+                    <Button>
                         <PlusCircle className="mr-2" />
                         Añadir Empleado
                     </Button>
@@ -197,7 +193,7 @@ export default function EmployeesPage() {
                                     <TableCell className="text-right px-4">
                                         <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" disabled={!canManageEmployees} title={!canManageEmployees ? 'No tienes permiso para gestionar empleados' : ''}>
+                                            <Button variant="ghost" size="icon">
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -265,8 +261,6 @@ function EmployeeDialog({
   const [name, setName] = React.useState(employee?.name || '');
   const [role, setRole] = React.useState<EmployeeRole | ''>(employee?.role || '');
   const [shiftRate, setShiftRate] = React.useState<number>(employee?.shiftRate || 0);
-  const [email, setEmail] = React.useState(employee?.email || '');
-  const [password, setPassword] = React.useState('');
 
   const { toast } = useToast();
 
@@ -288,12 +282,8 @@ function EmployeeDialog({
         name, 
         role: role as EmployeeRole, 
         shiftRate,
-        email: isEditing ? employee.email : (isGuard ? `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardia.local` : `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@guardian.co`),
+        email: `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@example.local`,
     };
-
-    if (password && !isGuard) {
-        saveData.password = password;
-    }
 
     onSave(saveData as Omit<Employee, 'id' | 'email'>);
   }
@@ -331,17 +321,6 @@ function EmployeeDialog({
                         <Input id="shiftRate" type="number" value={shiftRate === 0 ? '' : shiftRate} onChange={e => setShiftRate(parseFloat(e.target.value) || 0)} placeholder="0.00" />
                     </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="email">Correo Electrónico</Label>
-                    <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ejemplo@correo.com" disabled={isEditing} />
-                    {!isEditing && <p className="text-xs text-muted-foreground">El correo se genera automáticamente al guardar.</p>}
-                </div>
-                {!isGuard && (
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Contraseña</Label>
-                        <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={isEditing ? 'Dejar en blanco para no cambiar' : '••••••••'} />
-                    </div>
-                )}
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-4">
                  <DialogClose asChild>

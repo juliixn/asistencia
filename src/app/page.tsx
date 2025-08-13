@@ -64,7 +64,6 @@ import {
 } from 'lucide-react';
 import { add, format, getDate, getDaysInMonth, startOfMonth, sub, isAfter, getMonth, getYear, parseISO, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchEmployees, fetchWorkLocations, fetchLoanRequests, fetchAttendanceRecords, createOrUpdateAttendanceRecord } from '@/lib/api';
@@ -113,7 +112,6 @@ const STATUS_COLORS: Record<AttendanceStatus, string> = {
 };
 
 export default function GuardianPayrollPage() {
-  const { employee: currentUser, loading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [period, setPeriod] = React.useState<PayrollPeriod>('1-15');
   
@@ -370,11 +368,7 @@ export default function GuardianPayrollPage() {
     doc.save(`recibo_nomina_${employee.name.replace(/ /g, '_')}_${periodText.replace(/ /g, '_')}.pdf`);
   }
   
-  // Permission check for editing attendance
-  const canEditAttendance = currentUser?.role && ['Supervisor de Seguridad', 'Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
-  const canExportPayroll = currentUser?.role && ['Coordinador de Seguridad', 'Director de Seguridad'].includes(currentUser.role);
-
-  const isLoading = authLoading || employeesLoading || locationsLoading || loansLoading || attendanceLoading;
+  const isLoading = employeesLoading || locationsLoading || loansLoading || attendanceLoading;
 
   if (isLoading) {
     return (
@@ -518,7 +512,7 @@ export default function GuardianPayrollPage() {
                             </div>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" disabled={!canExportPayroll} title={!canExportPayroll ? 'No tienes permiso para exportar nóminas' : ''}>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                                         <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -541,16 +535,16 @@ export default function GuardianPayrollPage() {
                             <TableCell key={day} className="p-1 text-center border-l transition-colors duration-200 ease-in-out">
                                 <div className="flex flex-col gap-1">
                                     <button 
-                                      onClick={() => canEditAttendance && !isFuture && handleCellClick(employeeRow, day, 'day')} 
-                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
-                                      disabled={isFuture || !canEditAttendance}
+                                      onClick={() => !isFuture && handleCellClick(employeeRow, day, 'day')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${dayRecord ? STATUS_COLORS[dayRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
+                                      disabled={isFuture}
                                     >
                                         {dayRecord ? dayRecord.status.charAt(0) : 'D'}
                                     </button>
                                     <button 
-                                      onClick={() => canEditAttendance && !isFuture && handleCellClick(employeeRow, day, 'night')} 
-                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform ${canEditAttendance ? 'hover:scale-105' : ''} ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture || !canEditAttendance ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
-                                      disabled={isFuture || !canEditAttendance}
+                                      onClick={() => !isFuture && handleCellClick(employeeRow, day, 'night')} 
+                                      className={`w-full text-xs font-bold p-1 rounded-md transition-all duration-200 ease-in-out transform hover:scale-105 ${nightRecord ? STATUS_COLORS[nightRecord.status] : 'bg-gray-100 text-gray-400'} ${isFuture ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/10'}`}
+                                      disabled={isFuture}
                                     >
                                         {nightRecord ? nightRecord.status.charAt(0) : 'N'}
                                     </button>
@@ -698,5 +692,3 @@ function UpdateAttendanceDialog({
     </Dialog>
   );
 }
-
-    

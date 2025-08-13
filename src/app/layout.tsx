@@ -4,30 +4,21 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { BottomNavbar } from '@/components/bottom-navbar';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
 import React from 'react';
 import { Sidebar } from '@/components/sidebar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import LoginPage from './login/page';
-import { Loader2 } from 'lucide-react';
+import { seedInitialData } from '@/lib/api';
 
 const queryClient = new QueryClient();
 
 function AppContent({ children }: { children: React.ReactNode }) {
-  const { employee, loading } = useAuth();
+    React.useEffect(() => {
+        const initializeApp = async () => {
+            await seedInitialData();
+        };
+        initializeApp();
+    }, []);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!employee) {
-    return <LoginPage />;
-  }
-  
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
@@ -58,9 +49,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-              <AppContent>{children}</AppContent>
-          </AuthProvider>
+           <AppContent>{children}</AppContent>
         </QueryClientProvider>
       </body>
     </html>
