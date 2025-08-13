@@ -6,7 +6,6 @@ export interface Employee {
   name: string;
   role: EmployeeRole;
   shiftRate: number;
-  email: string;
 }
 
 export interface WorkLocation {

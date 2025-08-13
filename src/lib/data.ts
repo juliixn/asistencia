@@ -2,7 +2,7 @@
 import type { Employee, WorkLocation } from './types';
 
 // This data is used to seed the database on the first run.
-const employees: Omit<Employee, 'email'>[] = [
+const employees: Employee[] = [
   { id: 'dir-001', name: 'Carlos Mendoza', role: 'Director de Seguridad', shiftRate: 1200 },
   { id: 'coo-001', name: 'Ana Garcia', role: 'Coordinador de Seguridad', shiftRate: 800 },
   { id: 'sup-001', name: 'Juan Perez', role: 'Supervisor de Seguridad', shiftRate: 600 },
@@ -20,13 +20,7 @@ const workLocations: WorkLocation[] = [
   { id: 'loc-4', name: 'Hospital Central' },
 ];
 
-const employeesWithEmail = employees.map(e => ({
-    ...e,
-    email: `${e.name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@example.local`
-}));
-
-
 export const initialData = {
-    employees: employeesWithEmail,
+    employees,
     workLocations,
 }

@@ -138,7 +138,7 @@ export default function EmployeesPage() {
         updateMutation.mutate({ ...employeeData, id: editingEmployee.id });
     }
 
-    const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id' | 'email'>) => {
+    const handleAddEmployee = (newEmployeeData: Omit<Employee, 'id'>) => {
         createMutation.mutate(newEmployeeData);
     }
   
@@ -254,7 +254,7 @@ function EmployeeDialog({
   employee,
   onClose,
 }: { 
-  onSave: (data: Omit<Employee, 'id' | 'email'>) => void;
+  onSave: (data: Omit<Employee, 'id'>) => void;
   employee?: Employee;
   onClose?: () => void;
 }) {
@@ -278,14 +278,13 @@ function EmployeeDialog({
         return;
     }
     
-    const saveData: Partial<Omit<Employee, 'id'>> = { 
+    const saveData: Omit<Employee, 'id'> = { 
         name, 
         role: role as EmployeeRole, 
         shiftRate,
-        email: `${name.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '')}@example.local`,
     };
 
-    onSave(saveData as Omit<Employee, 'id' | 'email'>);
+    onSave(saveData);
   }
 
   return (

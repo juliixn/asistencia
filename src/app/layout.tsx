@@ -11,33 +11,18 @@ import { seedInitialData } from '@/lib/api';
 
 const queryClient = new QueryClient();
 
-function AppContent({ children }: { children: React.ReactNode }) {
-    React.useEffect(() => {
-        const initializeApp = async () => {
-            await seedInitialData();
-        };
-        initializeApp();
-    }, []);
-
-  return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto lg:pb-0 pb-20">
-            {children}
-        </div>
-        <BottomNavbar />
-      </main>
-      <Toaster />
-    </div>
-  );
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  React.useEffect(() => {
+    const initializeApp = async () => {
+        await seedInitialData();
+    };
+    initializeApp();
+  }, []);
+
   return (
     <html lang="es">
       <head>
@@ -49,7 +34,16 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <QueryClientProvider client={queryClient}>
-           <AppContent>{children}</AppContent>
+           <div className="flex h-screen bg-background">
+              <Sidebar />
+              <main className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto lg:pb-0 pb-20">
+                    {children}
+                </div>
+                <BottomNavbar />
+              </main>
+              <Toaster />
+            </div>
         </QueryClientProvider>
       </body>
     </html>
