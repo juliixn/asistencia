@@ -217,7 +217,7 @@ export default function PayrollPage() {
             <h1 className="text-xl md:text-2xl font-headline font-bold text-gray-800">Cálculo de Nómina</h1>
              <div className="flex items-center gap-2">
                  <Button disabled size="sm">
-                    <CheckCircle className="mr-0 md:mr-2" />
+                    <Lock className="mr-0 md:mr-2" />
                     <span className="hidden md:inline">Cerrar Periodo</span>
                 </Button>
                 <Button variant="outline" onClick={handleExportGeneralPDF} disabled={payrollData.length === 0} size="sm">

@@ -1,5 +1,5 @@
-# Firebase Studio
+# Guardian Payroll
 
-This is a NextJS starter in Firebase Studio.
+This is a Next.js application for managing security personnel attendance and payroll, built in Firebase Studio.
 
-To get started, take a look at src/app/page.tsx.
+To get started, explore the different sections of the application using the sidebar navigation.

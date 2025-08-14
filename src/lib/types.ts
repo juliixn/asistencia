@@ -55,18 +55,6 @@ export interface AttendanceRecord {
 
 export type PayrollPeriod = "1-15" | "16-end";
 
-export interface PayrollDeduction {
-  id: string;
-  amount: number;
-  description: string;
-}
-
-export interface PayrollBonus {
-  id: string;
-  amount: number;
-  description: string;
-}
-
 export interface PayrollDetail {
     employeeId: string;
     employeeName: string;
