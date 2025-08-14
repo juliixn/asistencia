@@ -17,10 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   React.useEffect(() => {
-    const initializeApp = async () => {
-        await seedInitialData();
-    };
-    initializeApp();
+    // Seeding data is now a server-side action and can be called from the client
+    seedInitialData();
   }, []);
 
   return (
