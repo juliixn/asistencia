@@ -26,7 +26,6 @@ export interface LoanRequest {
   status: LoanStatus;
   requestDate: string; // YYYY-MM-DD
   approvalDate: string | null; // YYYY-MM-DD
-  approvedById: string | null;
   signature: string; // Data URL of the signature image
 }
 

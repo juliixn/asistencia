@@ -134,7 +134,6 @@ export default function LoansPage() {
       updateMutation.mutate({
         id: loanId,
         status: newStatus,
-        approvedById: 'system', // No logged in user
         approvalDate: new Date().toISOString().split('T')[0],
       });
   };
@@ -360,7 +359,6 @@ function RequestLoanDialog({ onSave, onClose, employees }: { onSave: (data: Omit
             signature: signatureDataUrl,
             status: 'Pendiente',
             approvalDate: null,
-            approvedById: null,
         });
 
     } catch(error) {
