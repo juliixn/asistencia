@@ -6,6 +6,8 @@ export interface Employee {
   name: string;
   role: EmployeeRole;
   shiftRate: number;
+  email: string;
+  password?: string;
 }
 
 export interface WorkLocation {
