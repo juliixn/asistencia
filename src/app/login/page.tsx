@@ -66,7 +66,8 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle className="text-xl font-headline">Inicio de Sesión</CardTitle>
             <CardDescription>
-              Introduce tus credenciales para acceder al sistema.
+              Introduce tus credenciales. Prueba con:<br/>
+              <span className="font-medium">carlos.mendoza@guardian.co</span> / <span className="font-medium">password123</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
